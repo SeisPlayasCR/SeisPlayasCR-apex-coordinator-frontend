@@ -78,6 +78,7 @@ export default function Home() {
     }
   }
 
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
   const processBase64Document = async (base64String: string) => {
     try {
       setStatus('Procesando documento...')
@@ -87,7 +88,7 @@ export default function Home() {
       let decodedXml: string
       try {
         decodedXml = atob(base64String)
-      } catch (e) {
+      } catch {
         // Fallback for Node.js (unlikely in browser, but for SSR safety)
         decodedXml = Buffer.from(base64String, 'base64').toString('utf8')
       }
