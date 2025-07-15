@@ -19,7 +19,7 @@ export default function Home() {
     Numero: '',
     CorreoElectronico: ''
   })
-  
+
   const [loading, setLoading] = useState(false)
   const [status, setStatus] = useState<string>('')
   const [error, setError] = useState<string>('')
@@ -34,7 +34,7 @@ export default function Home() {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
-    
+
     if (!customerData.id || !customerData.Nombre || !customerData.Numero || !customerData.CorreoElectronico) {
       setError('Por favor, complete todos los campos requeridos')
       return
@@ -82,7 +82,7 @@ export default function Home() {
   const processBase64Document = async (base64String: string) => {
     try {
       setStatus('Procesando documento...')
-      
+
       // Decode the base64 string
       // Use atob for browser compatibility
       let decodedXml: string
@@ -92,13 +92,13 @@ export default function Home() {
         // Fallback for Node.js (unlikely in browser, but for SSR safety)
         decodedXml = Buffer.from(base64String, 'base64').toString('utf8')
       }
-      
+
       // Extract NumeroConsecutivo for filename
       const consecutivoMatch = decodedXml.match(
         /<NumeroConsecutivo>(.*?)<\/NumeroConsecutivo>/
       )
       const consecutivo = consecutivoMatch ? consecutivoMatch[1] : Date.now().toString()
-      
+
       // Create and download the XML file
       const blob = new Blob([decodedXml], { type: 'application/xml' })
       const url = window.URL.createObjectURL(blob)
@@ -109,7 +109,7 @@ export default function Home() {
       link.click()
       document.body.removeChild(link)
       window.URL.revokeObjectURL(url)
-      
+
       setStatus(`✅ XML guardado como 'factura_${consecutivo}.xml'`)
     } catch (err) {
       console.error('Failed to process document:', err)
@@ -216,11 +216,10 @@ export default function Home() {
             <button
               type="submit"
               disabled={loading}
-              className={`w-full py-4 px-6 rounded-lg font-medium text-white transition-all duration-200 ${
-                loading
+              className={`w-full py-4 px-6 rounded-lg font-medium text-white transition-all duration-200 ${loading
                   ? 'bg-amber-400 cursor-not-allowed'
                   : 'bg-amber-600 hover:bg-amber-700 active:bg-amber-800'
-              } focus:ring-4 focus:ring-amber-300`}
+                } focus:ring-4 focus:ring-amber-300`}
             >
               {loading ? (
                 <span className="flex items-center justify-center">

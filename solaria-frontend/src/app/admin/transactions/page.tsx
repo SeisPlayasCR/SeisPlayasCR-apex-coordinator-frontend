@@ -1,0 +1,179 @@
+"use client"
+
+import { useState } from "react"
+
+import { Button } from "@/components/ui/button"
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table"
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
+
+interface Transaction {
+    id: string
+    transactionId: string
+    amount: number
+    type: "Income" | "Expense"
+    date: string
+}
+
+export default function TransactionsPage() {
+    const [transactions, setTransactions] = useState<Transaction[]>([
+        {
+            id: "t1",
+            transactionId: "TRX001",
+            amount: 150.75,
+            type: "Income",
+            date: "2024-07-10",
+        },
+        {
+            id: "t2",
+            transactionId: "TRX002",
+            amount: 45.0,
+            type: "Expense",
+            date: "2024-07-09",
+        },
+        {
+            id: "t3",
+            transactionId: "TRX003",
+            amount: 200.0,
+            type: "Income",
+            date: "2024-07-08",
+        },
+        {
+            id: "t4",
+            transactionId: "TRX004",
+            amount: 12.5,
+            type: "Expense",
+            date: "2024-07-08",
+        },
+        {
+            id: "t5",
+            transactionId: "TRX005",
+            amount: 500.0,
+            type: "Income",
+            date: "2024-07-07",
+        },
+        {
+            id: "t6",
+            transactionId: "TRX006",
+            amount: 75.2,
+            type: "Expense",
+            date: "2024-07-06",
+        },
+    ])
+
+    const [currentPage, setCurrentPage] = useState(1)
+    const [itemsPerPage] = useState(5) // Same as users page for consistency
+
+    // Calculate pagination
+    const indexOfLastItem = currentPage * itemsPerPage
+    const indexOfFirstItem = indexOfLastItem - itemsPerPage
+    const currentTransactions = transactions.slice(indexOfFirstItem, indexOfLastItem)
+    const totalPages = Math.ceil(transactions.length / itemsPerPage)
+
+
+
+    return (
+        <div className="py-8 px-4">
+            <div className="flex flex-col space-y-6">
+                {/* Header */}
+                <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+                    <div>
+                        <h1 className="text-3xl font-bold text-gray-900">Transaction History</h1>
+                        <p className="text-gray-600 mt-1">View all financial transactions in the system</p>
+                    </div>
+
+                </div>
+
+                {/* Transactions Table */}
+                <Card>
+                    <CardHeader>
+                        <CardTitle>All Transactions</CardTitle>
+                        <CardDescription>A detailed list of all recorded transactions.</CardDescription>
+                    </CardHeader>
+                    <CardContent>
+                        <div id="transactions-table">
+                            <Table>
+                                <TableHeader>
+                                    <TableRow>
+                                        <TableHead className="w-[100px]">ID</TableHead>
+                                        <TableHead>Transaction ID</TableHead>
+                                        <TableHead>Amount</TableHead>
+                                        <TableHead>Type</TableHead>
+                                        <TableHead>Date</TableHead>
+                                    </TableRow>
+                                </TableHeader>
+                                <TableBody>
+                                    {transactions.length === 0 ? (
+                                        <TableRow>
+                                            <TableCell colSpan={5} className="text-center py-8 text-gray-500">
+                                                No transactions found.
+                                            </TableCell>
+                                        </TableRow>
+                                    ) : (
+                                        currentTransactions.map((transaction, index) => (
+                                            <TableRow key={transaction.id}>
+                                                <TableCell className="font-medium">{indexOfFirstItem + index + 1}</TableCell>
+                                                <TableCell>{transaction.transactionId}</TableCell>
+                                                <TableCell className={transaction.type === "Income" ? "text-green-600" : "text-red-600"}>
+                                                    {transaction.type === "Income" ? "+" : "-"} ${transaction.amount.toFixed(2)}
+                                                </TableCell>
+                                                <TableCell>
+                                                    <span
+                                                        className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${transaction.type === "Income" ? "bg-green-100 text-green-800" : "bg-red-100 text-red-800"
+                                                            }`}
+                                                    >
+                                                        {transaction.type}
+                                                    </span>
+                                                </TableCell>
+                                                <TableCell>{transaction.date}</TableCell>
+                                            </TableRow>
+                                        ))
+                                    )}
+                                </TableBody>
+                            </Table>
+                        </div>
+                    </CardContent>
+                    {/* Pagination */}
+                    {transactions.length > 0 && (
+                        <div className="flex items-center justify-between px-6 py-4">
+                            <div className="text-sm text-gray-700">
+                                Showing {indexOfFirstItem + 1} to {Math.min(indexOfLastItem, transactions.length)} of{" "}
+                                {transactions.length} results
+                            </div>
+                            <div className="flex items-center space-x-2">
+                                <Button
+                                    variant="outline"
+                                    size="sm"
+                                    onClick={() => setCurrentPage((prev) => Math.max(prev - 1, 1))}
+                                    disabled={currentPage === 1}
+                                >
+                                    Previous
+                                </Button>
+                                <div className="flex items-center space-x-1">
+                                    {Array.from({ length: totalPages }, (_, i) => i + 1).map((page) => (
+                                        <Button
+                                            key={page}
+                                            variant={currentPage === page ? "default" : "outline"}
+                                            size="sm"
+                                            onClick={() => setCurrentPage(page)}
+                                            className="w-8 h-8"
+                                        >
+                                            {page}
+                                        </Button>
+                                    ))}
+                                </div>
+                                <Button
+                                    variant="outline"
+                                    size="sm"
+                                    onClick={() => setCurrentPage((prev) => Math.min(prev + 1, totalPages))}
+                                    disabled={currentPage === totalPages}
+                                >
+                                    Next
+                                </Button>
+                            </div>
+                        </div>
+                    )}
+                </Card>
+            </div>
+        </div>
+    )
+}
