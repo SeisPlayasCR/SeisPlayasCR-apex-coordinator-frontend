@@ -36,23 +36,23 @@ export function Header() {
         <header className="flex h-16 shrink-0 items-center gap-2 border-b px-4 bg-background">
             <SidebarTrigger className="-ml-1" />
             <Separator orientation="vertical" className="mr-2 h-4" />
-            <h1 className="text-xl font-semibold text-gray-900">User Management</h1> {/* Main heading for the current page */}
+            <h1 className="text-xl font-semibold text-gray-900">Panel de administración</h1> {/* Main heading for the current page */}
             <div className="ml-auto flex items-center gap-4">
                 {/* User Dropdown / Logout */}
                 <DropdownMenu>
                     <DropdownMenuTrigger asChild>
                         <Button variant="ghost" size="icon" className="rounded-full">
                             <User2 className="h-5 w-5" />
-                            <span className="sr-only">User menu</span>
+                            <span className="sr-only">Menú de usuario</span>
                         </Button>
                     </DropdownMenuTrigger>
                     <DropdownMenuContent align="end">
-                        <DropdownMenuLabel>My Account</DropdownMenuLabel>
+                        <DropdownMenuLabel>Mi cuenta</DropdownMenuLabel>
                         <DropdownMenuSeparator />
                         <div onClick={handleSignOut}>
                             <DropdownMenuItem className="text-red-600">
                                 <LogOut className="mr-2 h-4 w-4" />
-                                Logout
+                                Cerrar sesión
                             </DropdownMenuItem>
                         </div>
                     </DropdownMenuContent>

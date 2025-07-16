@@ -24,16 +24,16 @@ export function AppSidebar() {
                     <SidebarGroupContent>
                         <div className="flex items-center justify-center p-4">
                             <LayoutDashboard className="h-8 w-8 text-blue-600" />
-                            <span className="ml-2 text-xl font-bold text-gray-900 group-data-[collapsible=icon]:hidden">
-                                Dashboard
-                            </span>
+                            <span className="ml-2 text-xl font-bold text-gray-900 
+                            group-data[collapsible=icon]:hidden">
+                                Panel                            </span>
                         </div>
                         <SidebarMenu>
                             <SidebarMenuItem>
                                 <SidebarMenuButton asChild isActive={pathname === "/admin/users"}>
                                     <Link href="/admin/users">
                                         <Users className="h-4 w-4" />
-                                        <span>Users</span>
+                                        <span>Clientes</span>
                                     </Link>
                                 </SidebarMenuButton>
                             </SidebarMenuItem>
@@ -41,7 +41,7 @@ export function AppSidebar() {
                                 <SidebarMenuButton asChild isActive={pathname === "/admin/transactions"}>
                                     <Link href="/admin/transactions">
                                         <DollarSign className="h-4 w-4" />
-                                        <span>Transactions</span>
+                                        <span>Actas</span>
                                     </Link>
                                 </SidebarMenuButton>
                             </SidebarMenuItem>

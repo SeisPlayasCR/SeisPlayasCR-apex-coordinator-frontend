@@ -8,6 +8,7 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { useQuery } from "@tanstack/react-query"
 import { getAllTransaction } from "@/utils/services/services"
+import { Spinner } from "../_components/Spinner";
 
 interface Transaction {
     _id: string
@@ -19,7 +20,7 @@ interface Transaction {
 
 export default function TransactionsPage() {
 
-    const { data, isSuccess } = useQuery({
+    const { data, isSuccess, isLoading } = useQuery({
         queryKey: ['getTransactions'],
         queryFn: getAllTransaction,
     })
@@ -93,8 +94,8 @@ export default function TransactionsPage() {
                 {/* Header */}
                 <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
                     <div>
-                        <h1 className="text-3xl font-bold text-gray-900">Transaction History</h1>
-                        <p className="text-gray-600 mt-1">View all financial transactions in the system</p>
+                        <h1 className="text-3xl font-bold text-gray-900">Historial de transacciones</h1>
+                        <p className="text-gray-600 mt-1">Ver todas las transacciones financieras en el sistema</p>
                     </div>
 
                 </div>
@@ -102,27 +103,31 @@ export default function TransactionsPage() {
                 {/* Transactions Table */}
                 <Card>
                     <CardHeader>
-                        <CardTitle>All Transactions</CardTitle>
-                        <CardDescription>A detailed list of all recorded transactions.</CardDescription>
+                        <CardTitle>Todas las transacciones</CardTitle>
+                        <CardDescription>Una lista detallada de todas las transacciones registradas.</CardDescription>
                     </CardHeader>
-                    <CardContent>
+                    {isLoading ? <div className="flex flex-col justify-center gap-1">
+                        <>
+                            <Spinner />
+                        </>
+                        <span className="text-center">Cargando transacciones</span>
+                    </div > : <CardContent>
                         <div id="transactions-table">
                             <Table>
                                 <TableHeader>
                                     <TableRow>
-                                        <TableHead>Transaction ID</TableHead>
-                                        <TableHead>Amount</TableHead>
-                                        <TableHead>DineIn</TableHead>
-                                        <TableHead>Table Id</TableHead>
-                                        <TableHead>Date</TableHead>
+                                        <TableHead>ID de transacción</TableHead>
+                                        <TableHead>Cantidad</TableHead>
+                                        <TableHead>¿Qué pasa con din EI?</TableHead>
+                                        <TableHead>Id. de tabla</TableHead>
+                                        <TableHead>Fecha</TableHead>
                                     </TableRow>
                                 </TableHeader>
                                 <TableBody>
                                     {transactions.length === 0 ? (
                                         <TableRow>
                                             <TableCell colSpan={5} className="text-center py-8 text-gray-500">
-                                                No transactions found.
-                                            </TableCell>
+                                                No se encontraron transacciones.                                            </TableCell>
                                         </TableRow>
                                     ) : (
                                         currentTransactions.map((transaction, index) => (
@@ -140,7 +145,7 @@ export default function TransactionsPage() {
                                                     </span>
                                                 </TableCell> */}
                                                 <TableCell>{transaction.totalAmount}</TableCell>
-                                                <TableCell>{transaction.dineIn === true ? <span> Yes</span> : <span>No</span>}</TableCell>
+                                                <TableCell>{transaction.dineIn === true ? <span> Sí</span> : <span>No</span>}</TableCell>
                                                 <TableCell>{transaction.table_id}</TableCell>
                                                 <TableCell>{moment(transaction.createdAt).format('MMMM Do YYYY, h:mm:ss a')
                                                 }</TableCell>
@@ -150,7 +155,7 @@ export default function TransactionsPage() {
                                 </TableBody>
                             </Table>
                         </div>
-                    </CardContent>
+                    </CardContent>}
                     {/* Pagination */}
                     {transactions.length > 0 && (
                         <div className="flex items-center justify-between px-6 py-4">
@@ -165,7 +170,7 @@ export default function TransactionsPage() {
                                     onClick={() => setCurrentPage((prev) => Math.max(prev - 1, 1))}
                                     disabled={currentPage === 1}
                                 >
-                                    Previous
+                                    Previa
                                 </Button>
                                 <div className="flex items-center space-x-1">
                                     {Array.from({ length: totalPages }, (_, i) => i + 1).map((page) => (
@@ -186,7 +191,7 @@ export default function TransactionsPage() {
                                     onClick={() => setCurrentPage((prev) => Math.min(prev + 1, totalPages))}
                                     disabled={currentPage === totalPages}
                                 >
-                                    Next
+                                    Próxima
                                 </Button>
                             </div>
                         </div>

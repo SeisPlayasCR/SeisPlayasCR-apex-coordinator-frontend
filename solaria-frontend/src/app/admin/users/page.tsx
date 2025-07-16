@@ -1,6 +1,6 @@
 "use client"
 
-import { useState } from "react"
+import { useState, useEffect } from "react"
 import { useForm } from "react-hook-form"
 import { zodResolver } from "@hookform/resolvers/zod"
 import * as z from "zod"
@@ -21,18 +21,22 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import { Card, CardContent } from "@/components/ui/card"
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip"
 import { useMutation, useQuery } from "@tanstack/react-query"
-import { getAllCustomers, sendToFactura } from "@/utils/services/services"
+import { getAllCustomers, sendToFactura } from "@/utils/services/services" // Assuming these services exist
 import { toast } from "sonner"
-import { useEffect } from "react"
-import moment from 'moment';
-import JSZip from 'jszip';
-import { saveAs } from 'file-saver';
+import moment from "moment"
+import JSZip from "jszip"
+import { saveAs } from "file-saver"
 
 const userSchema = z.object({
     transactionId: z.string().min(3, "Please Enter Id"),
     name: z.string().min(2, "Name must be at least 2 characters"),
     email: z.string().email("Please enter a valid email address"),
     userId: z.string().min(3, "User ID must be at least 3 characters"),
+    businessId: z.string().min(3, "Business ID must be at least 3 characters"), // Added
+    phoneNumber: z
+        .string()
+        .min(10, "Phone number must be at least 10 digits")
+        .max(15, "Phone number cannot exceed 15 digits"), // Added
     userType: z.string().min(1, "Please select a user type"),
 })
 
@@ -43,6 +47,8 @@ interface sendToFacturaInterface {
     name: string
     email: string
     userId: string
+    businessId: string // Added
+    phoneNumber: string // Added
     userType: string
 }
 
@@ -52,8 +58,8 @@ interface User {
     name: string
     email: string
     role: string
-    createdAt: string
-    facturas: { path: string }[];
+    // createdAt: string
+    facturas: { path: string }[]
 }
 
 export default function UsersPage() {
@@ -75,6 +81,8 @@ export default function UsersPage() {
             name: "",
             email: "",
             userId: "",
+            businessId: "", // Added
+            phoneNumber: "", // Added
             userType: "",
         },
     })
@@ -87,6 +95,8 @@ export default function UsersPage() {
             toast.success("User added successfully!")
             form.reset()
             setOpen(false)
+            // Optionally refetch users after successful addition
+            // queryClient.invalidateQueries(['getAllCustomers']);
         },
         onError: (error) => {
             console.error("Error adding user:", error)
@@ -94,170 +104,226 @@ export default function UsersPage() {
         },
     })
 
-
     const onSubmit = async (data: UserFormValues) => {
         console.log("Form submitted with data:", data)
         await mutate(data)
     }
 
+    const { data, isSuccess } = useQuery({ queryKey: ["getAllCustomers"], queryFn: getAllCustomers })
 
-    const { data, isSuccess } = useQuery({ queryKey: ['getAllCustomers'], queryFn: getAllCustomers })
-    console.log(data, "Hey I am the Customers")
     useEffect(() => {
         if (data) {
             setUsers(data.result)
         }
-    }, [isSuccess])
+    }, [isSuccess, data])
 
     const downloadFacturas = async (facturas: { path: string }[]) => {
         if (!facturas?.length) {
-            alert('No facturas found.');
-            return;
+            alert("No facturas found.")
+            return
         }
-
-        const zip = new JSZip();
-        const folder = zip.folder("facturas");
-        const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://127.0.0.1:4003';
+        const zip = new JSZip()
+        const folder = zip.folder("facturas")
+        const API_URL = process.env.NEXT_PUBLIC_API_URL || "http://127.0.0.1:4003"
 
         for (const { path } of facturas) {
-            const fileName = path.split('/').pop() || 'factura.pdf';
-            const fileUrl = `${API_URL}${path}`;
-
+            const fileName = path.split("/").pop() || "factura.pdf"
+            const fileUrl = `${API_URL}${path}`
             try {
-                const response = await fetch(fileUrl);
-                if (!response.ok) throw new Error(`Failed to fetch: ${fileUrl}`);
-                const blob = await response.blob();
-                folder?.file(fileName, blob);
+                const response = await fetch(fileUrl)
+                if (!response.ok) throw new Error(`Failed to fetch: ${fileUrl}`)
+                const blob = await response.blob()
+                folder?.file(fileName, blob)
             } catch (err) {
-                console.error(`Failed to download ${fileUrl}`, err);
+                console.error(`Failed to download ${fileUrl}`, err)
             }
         }
 
-        zip.generateAsync({ type: 'blob' })
+        zip
+            .generateAsync({ type: "blob" })
             .then((content) => {
-                saveAs(content, "facturas.zip");
+                saveAs(content, "facturas.zip")
             })
             .catch((err) => {
-                console.error("Failed to generate zip", err);
-            });
-    };
+                console.error("Failed to generate zip", err)
+            })
+    }
+
     return (
         <div className="container mx-auto py-8 px-4">
             <div className="flex flex-col space-y-6">
                 {/* Header */}
                 <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
                     <div>
-                        <h1 className="text-3xl font-bold text-gray-900">User Management</h1>
-                        <p className="text-gray-600 mt-1">Manage and view all users in the system</p>
+                        <h1 className="text-3xl font-bold text-gray-900">Gestión de usuarios</h1>
+                        <p className="text-gray-600 mt-1">Administrar y ver todas las usuarios del sistema.</p>
                     </div>
-                    <div className="flex gap-3">
-                        <Dialog open={open} onOpenChange={setOpen}>
-                            <DialogTrigger asChild>
-                                <Button className="flex items-center gap-2">
-                                    <Plus className="h-4 w-4" />
-                                    Add User
-                                </Button>
-                            </DialogTrigger>
-                            <DialogContent className="sm:max-w-[500px]">
-                                <DialogHeader>
-                                    <DialogTitle>Add New User</DialogTitle>
-                                    <DialogDescription>Fill in the details below to create a new user account.</DialogDescription>
-                                </DialogHeader>
-                                <Form {...form}>
-                                    <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6">
-                                        <FormField
-                                            control={form.control}
-                                            name="transactionId"
-                                            render={({ field }) => (
-                                                <FormItem>
-                                                    <FormLabel>Transaction Id</FormLabel>
+                    <Dialog open={open} onOpenChange={setOpen}>
+                        <DialogTrigger asChild>
+                            <Button className="flex items-center gap-2">
+                                <Plus className="h-4 w-4" />
+                                Agregar usuario                            </Button>
+                        </DialogTrigger>
+                        <DialogContent className="sm:max-w-[500px] max-h-[90vh] overflow-y-auto p-6">
+                            <DialogHeader>
+                                <DialogTitle>Agregar nuevo usuario</DialogTitle>
+                                <DialogDescription>Complete los datos a continuación para crear una nueva cuenta de usuario.</DialogDescription>
+                            </DialogHeader>
+                            <Form {...form}>
+                                <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6">
+                                    <FormField
+                                        control={form.control}
+                                        name="transactionId"
+                                        render={({ field }) => (
+                                            <FormItem>
+                                                <FormLabel>ID de transacción</FormLabel>
+                                                <FormControl>
+                                                    <div className="relative">
+                                                        <Input placeholder="Ingrese el ID de transacción" {...field} className="pr-10" />
+                                                    </div>
+                                                </FormControl>
+                                                <FormMessage />
+                                            </FormItem>
+                                        )}
+                                    />
+                                    <FormField
+                                        control={form.control}
+                                        name="name"
+                                        render={({ field }) => (
+                                            <FormItem>
+                                                <FormLabel>Nombre</FormLabel>
+                                                <FormControl>
+                                                    <div className="relative">
+                                                        <Input placeholder="Ingrese el nombre del usuario o busque..." {...field} className="pr-10" />
+                                                        <Search className="absolute right-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-gray-400" />
+                                                    </div>
+                                                </FormControl>
+                                                <FormMessage />
+                                            </FormItem>
+                                        )}
+                                    />
+                                    <FormField
+                                        control={form.control}
+                                        name="email"
+                                        render={({ field }) => (
+                                            <FormItem>
+                                                <FormLabel>Correo electrónico</FormLabel>
+                                                <FormControl>
+                                                    <Input type="email" placeholder="Ingrese la dirección de correo electrónico" {...field} />
+                                                </FormControl>
+                                                <FormMessage />
+                                            </FormItem>
+                                        )}
+                                    />
+                                    <FormField
+                                        control={form.control}
+                                        name="userId"
+                                        render={({ field }) => (
+                                            <FormItem>
+                                                <FormLabel>ID de usuario</FormLabel>
+                                                <FormControl>
+                                                    <Input placeholder="Ingrese un ID de usuario único" {...field} />
+                                                </FormControl>
+                                                <FormMessage />
+                                            </FormItem>
+                                        )}
+                                    />
+                                    <FormField
+                                        control={form.control}
+                                        name="businessId"
+                                        render={({ field }) => (
+                                            <FormItem>
+                                                <FormLabel>ID de empresa</FormLabel>
+                                                <FormControl>
+                                                    <Input placeholder="Ingrese el ID de empresa" {...field} />
+                                                </FormControl>
+                                                <FormMessage />
+                                            </FormItem>
+                                        )}
+                                    />
+                                    <FormField
+                                        control={form.control}
+                                        name="phoneNumber"
+                                        render={({ field }) => (
+                                            <FormItem>
+                                                <FormLabel>Número de teléfono</FormLabel>
+                                                <FormControl>
+                                                    <Input placeholder="Ingrese el número de teléfono" {...field} />
+                                                </FormControl>
+                                                <FormMessage />
+                                            </FormItem>
+                                        )}
+                                    />
+                                    <FormField
+                                        control={form.control}
+                                        name="userType"
+                                        render={({ field }) => (
+                                            <FormItem>
+                                                <FormLabel>Tipo de usuario</FormLabel>
+                                                <Select onValueChange={field.onChange} defaultValue={field.value}>
                                                     <FormControl>
-                                                        <div className="relative">
-                                                            <Input placeholder="Enter transactionId" {...field} className="pr-10" />
-                                                        </div>
+                                                        <SelectTrigger>
+                                                            <SelectValue placeholder="Seleccione el tipo de usuario" />
+                                                        </SelectTrigger>
                                                     </FormControl>
-                                                    <FormMessage />
-                                                </FormItem>
-                                            )}
-                                        />
-                                        <FormField
-                                            control={form.control}
-                                            name="name"
-                                            render={({ field }) => (
-                                                <FormItem>
-                                                    <FormLabel>Name</FormLabel>
-                                                    <FormControl>
-                                                        <div className="relative">
-                                                            <Input placeholder="Enter user name or search..." {...field} className="pr-10" />
-                                                            <Search className="absolute right-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-gray-400" />
-                                                        </div>
-                                                    </FormControl>
-                                                    <FormMessage />
-                                                </FormItem>
-                                            )}
-                                        />
-                                        <FormField
-                                            control={form.control}
-                                            name="email"
-                                            render={({ field }) => (
-                                                <FormItem>
-                                                    <FormLabel>Email</FormLabel>
-                                                    <FormControl>
-                                                        <Input type="email" placeholder="Enter email address" {...field} />
-                                                    </FormControl>
-                                                    <FormMessage />
-                                                </FormItem>
-                                            )}
-                                        />
-                                        <FormField
-                                            control={form.control}
-                                            name="userId"
-                                            render={({ field }) => (
-                                                <FormItem>
-                                                    <FormLabel>User ID</FormLabel>
-                                                    <FormControl>
-                                                        <Input placeholder="Enter unique user ID" {...field} />
-                                                    </FormControl>
-                                                    <FormMessage />
-                                                </FormItem>
-                                            )}
-                                        />
-                                        <FormField
-                                            control={form.control}
-                                            name="userType"
-                                            render={({ field }) => (
-                                                <FormItem>
-                                                    <FormLabel>User Type</FormLabel>
-                                                    <Select onValueChange={field.onChange} defaultValue={field.value}>
-                                                        <FormControl>
-                                                            <SelectTrigger>
-                                                                <SelectValue placeholder="Select user type" />
-                                                            </SelectTrigger>
-                                                        </FormControl>
-                                                        <SelectContent className="w-full">
-                                                            <SelectItem value="01">01</SelectItem>
-                                                            <SelectItem value="02">02</SelectItem>
-                                                            <SelectItem value="03">03</SelectItem>
-                                                            <SelectItem value="04">04</SelectItem>
-                                                        </SelectContent>
-                                                    </Select>
-                                                    <FormMessage />
-                                                </FormItem>
-                                            )}
-                                        />
-                                        <div className="flex justify-end space-x-3 pt-4">
-                                            <Button type="button" variant="outline" onClick={() => setOpen(false)}>
-                                                Cancel
-                                            </Button>
-                                            <Button type="submit" disabled={isPending}>
-                                                {isPending ? "Adding..." : "Add User"}
-                                            </Button>
-                                        </div>
-                                    </form>
-                                </Form>
-                            </DialogContent>
-                        </Dialog>
-                    </div>
+                                                    <SelectContent className="w-full space-y-1">
+                                                        <TooltipProvider>
+                                                            <Tooltip>
+                                                                <TooltipTrigger asChild>
+                                                                    <SelectItem value="01">01</SelectItem>
+                                                                </TooltipTrigger>
+                                                                <TooltipContent>
+                                                                    <p>Persona física costarricense</p>
+                                                                </TooltipContent>
+                                                            </Tooltip>
+
+                                                            <Tooltip>
+                                                                <TooltipTrigger asChild>
+                                                                    <SelectItem value="02">02</SelectItem>
+                                                                </TooltipTrigger>
+                                                                <TooltipContent>
+                                                                    <p>Persona jurídica costarricense estatal (pública) o privada</p>
+                                                                </TooltipContent>
+                                                            </Tooltip>
+
+                                                            <Tooltip>
+                                                                <TooltipTrigger asChild>
+                                                                    <SelectItem value="03">03</SelectItem>
+                                                                </TooltipTrigger>
+                                                                <TooltipContent>
+                                                                    <p>Persona física extranjera (DIMEX)</p>
+                                                                </TooltipContent>
+                                                            </Tooltip>
+
+                                                            <Tooltip>
+                                                                <TooltipTrigger asChild>
+                                                                    <SelectItem value="04">04</SelectItem>
+                                                                </TooltipTrigger>
+                                                                <TooltipContent>
+                                                                    <p>Número de identificación tributario para personas físicas (NITE)</p>
+                                                                </TooltipContent>
+                                                            </Tooltip>
+                                                        </TooltipProvider>
+                                                    </SelectContent>
+                                                </Select>
+                                                <FormMessage />
+                                            </FormItem>
+                                        )}
+                                    />
+
+                                    <div className="flex justify-end space-x-3 pt-4">
+                                        <Button type="button" variant="outline" onClick={() => setOpen(false)}>
+                                            Cancelar
+                                        </Button>
+                                        <Button type="submit" disabled={isPending}>
+                                            {isPending ? "Agregando..." : "Agregar usuario"}
+                                        </Button>
+                                    </div>
+                                </form>
+                            </Form>
+                        </DialogContent>
+
+                    </Dialog>
                 </div>
                 {/* Users Table */}
                 <Card>
@@ -266,13 +332,13 @@ export default function UsersPage() {
                             <Table>
                                 <TableHeader>
                                     <TableRow>
-                                        <TableHead className="w-[100px]">customerId</TableHead>
-                                        <TableHead>Transaction ID</TableHead>
-                                        <TableHead>Name</TableHead>
-                                        <TableHead>Email</TableHead>
-                                        <TableHead>role</TableHead>
-                                        <TableHead>Date</TableHead>
-                                        <TableHead className="text-right">Actions</TableHead>
+                                        <TableHead className="w-[100px]">ID de cliente</TableHead>
+                                        <TableHead>ID de transacción</TableHead>
+                                        <TableHead>Nombre</TableHead>
+                                        <TableHead>Correo electrónico</TableHead>
+                                        <TableHead>Rol</TableHead>
+                                        {/* <TableHead>Fecha</TableHead> */}
+                                        <TableHead className="text-right">Acciones</TableHead>
                                     </TableRow>
                                 </TableHeader>
                                 <TableBody>
@@ -290,8 +356,7 @@ export default function UsersPage() {
                                                 <TableCell>{user.name}</TableCell>
                                                 <TableCell>{user.email}</TableCell>
                                                 <TableCell>{user.role}</TableCell>
-                                                <TableCell>{moment(user.createdAt).format('MMMM Do YYYY, h:mm:ss a')
-                                                }</TableCell>
+                                                {/* <TableCell>{moment(user.createdAt).format("MMMM Do YYYY, h:mm:ss a")}</TableCell> */}
                                                 <TableCell className="text-right">
                                                     <TooltipProvider>
                                                         <Tooltip>
@@ -313,7 +378,6 @@ export default function UsersPage() {
                                                         </Tooltip>
                                                     </TooltipProvider>
                                                 </TableCell>
-
                                             </TableRow>
                                         ))
                                     )}

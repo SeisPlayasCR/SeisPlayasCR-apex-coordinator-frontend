@@ -20,15 +20,18 @@ interface sendToFacturaInterface {
     userType: string   // Tipo
     userId: string //Numero
     email: string // CorreoElectronico
+    businessId: string
+    phoneNumber: string
 }
-
 
 const sendToFactura = async (data: sendToFacturaInterface) => {
     const dataToSend = {
         Nombre: data.name,
         Tipo: data.userType,
         Numero: data.userId,
-        CorreoElectronico: data.email
+        CorreoElectronico: data.email,
+        businessId: data.businessId,
+        phoneNumber: data.phoneNumber
     }
 
     try {
