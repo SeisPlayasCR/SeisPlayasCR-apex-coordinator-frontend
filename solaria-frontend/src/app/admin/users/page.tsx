@@ -273,9 +273,17 @@ export default function UsersPage() {
                                                         {/* This div is for the input and icon positioning */}
                                                         <div className="relative">
                                                             <Input
-                                                                ref={nameInputRef}
                                                                 placeholder="Ingrese el nombre del usuario o busque..."
                                                                 {...field}
+                                                                ref={(el) => {
+                                                                    nameInputRef.current = el
+                                                                    if (typeof field.ref === "function") {
+                                                                        field.ref(el)
+                                                                    } else if (field.ref && typeof field.ref === "object" && "current" in field.ref) {
+                                                                        // @ts-expect-error: field.ref may not be typed correctly
+                                                                        field.ref.current = el
+                                                                    }
+                                                                }}
                                                                 onChange={handleNameInputChange}
                                                                 className="pr-10"
                                                                 onFocus={() => setShowSuggestions(true)}
