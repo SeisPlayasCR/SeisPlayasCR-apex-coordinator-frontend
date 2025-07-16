@@ -10,7 +10,7 @@ import { useQuery } from "@tanstack/react-query"
 import { getAllTransaction } from "@/utils/services/services"
 
 interface Transaction {
-    id: string
+    _id: string
     totalAmount: number
     dineIn: boolean
     table_id: string
@@ -19,7 +19,7 @@ interface Transaction {
 
 export default function TransactionsPage() {
 
-    const { isPending, isError, data, error, isSuccess } = useQuery({
+    const { data, isSuccess } = useQuery({
         queryKey: ['getTransactions'],
         queryFn: getAllTransaction,
     })

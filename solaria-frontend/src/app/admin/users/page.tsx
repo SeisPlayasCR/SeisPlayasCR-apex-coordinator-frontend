@@ -47,7 +47,7 @@ interface sendToFacturaInterface {
 }
 
 interface User {
-    id: string
+    _id: string
     customerId: string
     name: string
     email: string
