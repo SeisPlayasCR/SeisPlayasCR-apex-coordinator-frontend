@@ -20,9 +20,13 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table"
 import { Card, CardContent } from "@/components/ui/card"
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip"
-import { useMutation } from "@tanstack/react-query"
-import { sendToFactura } from "@/utils/services/services"
+import { useMutation, useQuery } from "@tanstack/react-query"
+import { getAllCustomers, sendToFactura } from "@/utils/services/services"
 import { toast } from "sonner"
+import { useEffect } from "react"
+import moment from 'moment';
+import JSZip from 'jszip';
+import { saveAs } from 'file-saver';
 
 const userSchema = z.object({
     transactionId: z.string().min(3, "Please Enter Id"),
@@ -44,81 +48,17 @@ interface sendToFacturaInterface {
 
 interface User {
     id: string
-    transactionId: string
+    customerId: string
     name: string
     email: string
-    userId: string
-    userType: string
+    role: string
     createdAt: string
+    facturas: { path: string }[];
 }
 
 export default function UsersPage() {
     const [open, setOpen] = useState(false)
-    const [users, setUsers] = useState<User[]>([
-        {
-            id: "1",
-            transactionId: "TRN001",
-            name: "John Doe",
-            email: "john@example.com",
-            userId: "JD001",
-            userType: "Admin",
-            createdAt: "2024-01-15",
-        },
-        {
-            id: "2",
-            transactionId: "TRN002",
-            name: "Jane Smith",
-            email: "jane@example.com",
-            userId: "JS002",
-            userType: "User",
-            createdAt: "2024-01-16",
-        },
-        {
-            id: "3",
-            transactionId: "TRN003",
-            name: "Mike Johnson",
-            email: "mike@example.com",
-            userId: "MJ003",
-            userType: "Moderator",
-            createdAt: "2024-01-17",
-        },
-        {
-            id: "4",
-            transactionId: "TRN004",
-            name: "Mike Johnson",
-            email: "mike@example.com",
-            userId: "MJ003",
-            userType: "Moderator",
-            createdAt: "2024-01-17",
-        },
-        {
-            id: "5",
-            transactionId: "TRN005",
-            name: "Mike Johnson",
-            email: "mike@example.com",
-            userId: "MJ003",
-            userType: "Moderator",
-            createdAt: "2024-01-17",
-        },
-        {
-            id: "6",
-            transactionId: "TRN006",
-            name: "Mike Johnson",
-            email: "mike@example.com",
-            userId: "MJ003",
-            userType: "Moderator",
-            createdAt: "2024-01-17",
-        },
-        {
-            id: "7",
-            transactionId: "TRN007",
-            name: "Mike Johnson",
-            email: "mike@example.com",
-            userId: "MJ003",
-            userType: "Moderator",
-            createdAt: "2024-01-17",
-        },
-    ])
+    const [users, setUsers] = useState<User[]>([])
     const [currentPage, setCurrentPage] = useState(1)
     const [itemsPerPage] = useState(5)
 
@@ -144,16 +84,12 @@ export default function UsersPage() {
         mutationFn: (data: sendToFacturaInterface) => sendToFactura(data),
         onSuccess: (data) => {
             console.log("User added successfully:", data)
-            // Optional: Show success toast
             toast.success("User added successfully!")
-
-            // Reset form and close dialog
             form.reset()
             setOpen(false)
         },
         onError: (error) => {
             console.error("Error adding user:", error)
-            // Optional: Show error toast
             toast.error("Failed to add user. Please try again.")
         },
     })
@@ -161,50 +97,50 @@ export default function UsersPage() {
 
     const onSubmit = async (data: UserFormValues) => {
         console.log("Form submitted with data:", data)
-
-        //     // Transform data to match API interface
-        //     const apiData: sendToFacturaInterface = {
-        //         transactionId: data.transactionId,
-        //         name: data.name,
-        //         email: data.email,
-        //         userId: data.userId,
-        //         userType: data.userType,
-        //     }
-
-        //     // Call mutation
         await mutate(data)
     }
 
-    const handlePrintUser = (user: User) => {
-        const printWindow = window.open("", "_blank")
-        if (printWindow) {
-            printWindow.document.write(`
-          <html>
-            <head>
-              <title>User Details - ${user.name}</title>
-              <style>
-                body { font-family: sans-serif; padding: 20px; }
-                h1 { color: #333; }
-                p { margin-bottom: 10px; }
-                strong { display: inline-block; width: 100px; }
-              </style>
-            </head>
-            <body>
-              <h1>User Details</h1>
-              <p><strong>Transaction ID:</strong> ${user.transactionId}</p>
-              <p><strong>Name:</strong> ${user.name}</p>
-              <p><strong>Email:</strong> ${user.email}</p>
-              <p><strong>User ID:</strong> ${user.userId}</p>
-              <p><strong>User Type:</strong> ${user.userType}</p>
-              <p><strong>Created At:</strong> ${user.createdAt}</p>
-            </body>
-          </html>
-        `)
-            printWindow.document.close()
-            printWindow.print()
-        }
-    }
 
+    const { data, isSuccess } = useQuery({ queryKey: ['getAllCustomers'], queryFn: getAllCustomers })
+    console.log(data, "Hey I am the Customers")
+    useEffect(() => {
+        if (data) {
+            setUsers(data.result)
+        }
+    }, [isSuccess])
+
+    const downloadFacturas = async (facturas: { path: string }[]) => {
+        if (!facturas?.length) {
+            alert('No facturas found.');
+            return;
+        }
+
+        const zip = new JSZip();
+        const folder = zip.folder("facturas");
+        const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://127.0.0.1:4003';
+
+        for (const { path } of facturas) {
+            const fileName = path.split('/').pop() || 'factura.pdf';
+            const fileUrl = `${API_URL}${path}`;
+
+            try {
+                const response = await fetch(fileUrl);
+                if (!response.ok) throw new Error(`Failed to fetch: ${fileUrl}`);
+                const blob = await response.blob();
+                folder?.file(fileName, blob);
+            } catch (err) {
+                console.error(`Failed to download ${fileUrl}`, err);
+            }
+        }
+
+        zip.generateAsync({ type: 'blob' })
+            .then((content) => {
+                saveAs(content, "facturas.zip");
+            })
+            .catch((err) => {
+                console.error("Failed to generate zip", err);
+            });
+    };
     return (
         <div className="container mx-auto py-8 px-4">
             <div className="flex flex-col space-y-6">
@@ -330,13 +266,12 @@ export default function UsersPage() {
                             <Table>
                                 <TableHeader>
                                     <TableRow>
-                                        <TableHead className="w-[100px]">ID</TableHead>
+                                        <TableHead className="w-[100px]">customerId</TableHead>
                                         <TableHead>Transaction ID</TableHead>
                                         <TableHead>Name</TableHead>
                                         <TableHead>Email</TableHead>
-                                        <TableHead>User ID</TableHead>
-                                        <TableHead>User Type</TableHead>
-                                        <TableHead>Created Date</TableHead>
+                                        <TableHead>role</TableHead>
+                                        <TableHead>Date</TableHead>
                                         <TableHead className="text-right">Actions</TableHead>
                                     </TableRow>
                                 </TableHeader>
@@ -349,25 +284,14 @@ export default function UsersPage() {
                                         </TableRow>
                                     ) : (
                                         currentUsers.map((user, index) => (
-                                            <TableRow key={user.id}>
-                                                <TableCell className="font-medium">{indexOfFirstItem + index + 1}</TableCell>
-                                                <TableCell>{user.transactionId}</TableCell>
+                                            <TableRow key={index}>
+                                                <TableCell>{user._id}</TableCell>
+                                                <TableCell>{user.customerId}</TableCell>
                                                 <TableCell>{user.name}</TableCell>
                                                 <TableCell>{user.email}</TableCell>
-                                                <TableCell>{user.userId}</TableCell>
-                                                <TableCell>
-                                                    <span
-                                                        className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${user.userType === "Admin"
-                                                            ? "bg-red-100 text-red-800"
-                                                            : user.userType === "Moderator"
-                                                                ? "bg-yellow-100 text-yellow-800"
-                                                                : "bg-green-100 text-green-800"
-                                                            }`}
-                                                    >
-                                                        {user.userType}
-                                                    </span>
-                                                </TableCell>
-                                                <TableCell>{user.createdAt}</TableCell>
+                                                <TableCell>{user.role}</TableCell>
+                                                <TableCell>{moment(user.createdAt).format('MMMM Do YYYY, h:mm:ss a')
+                                                }</TableCell>
                                                 <TableCell className="text-right">
                                                     <TooltipProvider>
                                                         <Tooltip>
@@ -375,19 +299,21 @@ export default function UsersPage() {
                                                                 <Button
                                                                     variant="ghost"
                                                                     size="icon"
-                                                                    onClick={() => handlePrintUser(user)}
-                                                                    className="h-8 w-8"
+                                                                    disabled={!user.facturas?.length}
+                                                                    onClick={() => user.facturas?.length && downloadFacturas(user.facturas)}
+                                                                    className={`h-8 w-8 ${!user.facturas?.length ? "cursor-not-allowed opacity-50" : ""}`}
                                                                 >
                                                                     <Printer className="h-4 w-4" />
-                                                                    <span className="sr-only">Print {user.name}</span>
+                                                                    <span className="sr-only">Download all facturas for {user.name}</span>
                                                                 </Button>
                                                             </TooltipTrigger>
                                                             <TooltipContent>
-                                                                <p>Print User Details</p>
+                                                                <p>Download all facturas</p>
                                                             </TooltipContent>
                                                         </Tooltip>
                                                     </TooltipProvider>
                                                 </TableCell>
+
                                             </TableRow>
                                         ))
                                     )}

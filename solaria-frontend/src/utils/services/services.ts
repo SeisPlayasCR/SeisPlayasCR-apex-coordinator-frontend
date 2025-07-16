@@ -41,9 +41,21 @@ const sendToFactura = async (data: sendToFacturaInterface) => {
         return response.data
 
     } catch (error) {
+        console.log(error)
         throw new Error("Error in Sending Data to factura")
 
     }
 }
 
-export { getAllTransaction, sendToFactura }
+const getAllCustomers = async () => {
+    try {
+        const response = await axiosInstance.get(`/api/v1/admin/customer`)
+        return response.data
+
+    } catch (error) {
+        console.error(error)
+        throw new Error("Error in Getting All customers")
+
+    }
+}
+export { getAllTransaction, sendToFactura, getAllCustomers }
