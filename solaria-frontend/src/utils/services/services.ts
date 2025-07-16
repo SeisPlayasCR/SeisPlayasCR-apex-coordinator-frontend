@@ -17,21 +17,23 @@ const getAllTransaction = async () => {
 interface sendToFacturaInterface {
     transactionId: string
     name: string  // Nombre
-    userType: string   // Tipo
+    // userType: string   // Tipo
     userId: string //Numero
     email: string // CorreoElectronico
     businessId: string
     phoneNumber: string
+    code: string
 }
 
 const sendToFactura = async (data: sendToFacturaInterface) => {
     const dataToSend = {
         Nombre: data.name,
-        Tipo: data.userType,
+        // Tipo: data.userType,
         Numero: data.userId,
         CorreoElectronico: data.email,
         businessId: data.businessId,
-        phoneNumber: data.phoneNumber
+        phoneNumber: data.phoneNumber,
+        code: data.code
     }
 
     try {
