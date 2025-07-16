@@ -1,64 +1,80 @@
 "use client"
 
-import { useState } from "react"
+import { useEffect, useState } from "react"
+import moment from 'moment';
 
 import { Button } from "@/components/ui/button"
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
+import { useQuery } from "@tanstack/react-query"
+import { getAllTransaction } from "@/utils/services/services"
 
 interface Transaction {
     id: string
-    transactionId: string
-    amount: number
-    type: "Income" | "Expense"
-    date: string
+    totalAmount: number
+    dineIn: boolean
+    table_id: string
+    createdAt: string
 }
 
 export default function TransactionsPage() {
+
+    const { isPending, isError, data, error, isSuccess } = useQuery({
+        queryKey: ['getTransactions'],
+        queryFn: getAllTransaction,
+    })
+    console.log(data?.result?.data, "Heyyyyyyyyyyyyyyy")
     const [transactions, setTransactions] = useState<Transaction[]>([
-        {
-            id: "t1",
-            transactionId: "TRX001",
-            amount: 150.75,
-            type: "Income",
-            date: "2024-07-10",
-        },
-        {
-            id: "t2",
-            transactionId: "TRX002",
-            amount: 45.0,
-            type: "Expense",
-            date: "2024-07-09",
-        },
-        {
-            id: "t3",
-            transactionId: "TRX003",
-            amount: 200.0,
-            type: "Income",
-            date: "2024-07-08",
-        },
-        {
-            id: "t4",
-            transactionId: "TRX004",
-            amount: 12.5,
-            type: "Expense",
-            date: "2024-07-08",
-        },
-        {
-            id: "t5",
-            transactionId: "TRX005",
-            amount: 500.0,
-            type: "Income",
-            date: "2024-07-07",
-        },
-        {
-            id: "t6",
-            transactionId: "TRX006",
-            amount: 75.2,
-            type: "Expense",
-            date: "2024-07-06",
-        },
+        // {
+        //     id: "t1",
+        //     transactionId: "TRX001",
+        //     amount: 150.75,
+        //     type: "Income",
+        //     date: "2024-07-10",
+        // },
+        // {
+        //     id: "t2",
+        //     transactionId: "TRX002",
+        //     amount: 45.0,
+        //     type: "Expense",
+        //     date: "2024-07-09",
+        // },
+        // {
+        //     id: "t3",
+        //     transactionId: "TRX003",
+        //     amount: 200.0,
+        //     type: "Income",
+        //     date: "2024-07-08",
+        // },
+        // {
+        //     id: "t4",
+        //     transactionId: "TRX004",
+        //     amount: 12.5,
+        //     type: "Expense",
+        //     date: "2024-07-08",
+        // },
+        // {
+        //     id: "t5",
+        //     transactionId: "TRX005",
+        //     amount: 500.0,
+        //     type: "Income",
+        //     date: "2024-07-07",
+        // },
+        // {
+        //     id: "t6",
+        //     transactionId: "TRX006",
+        //     amount: 75.2,
+        //     type: "Expense",
+        //     date: "2024-07-06",
+        // },
     ])
+    useEffect(() => {
+        if (data) {
+            setTransactions(data.result.data)
+        }
+    }, [isSuccess])
+    console.log(data, "Hey I am the data")
+
 
     const [currentPage, setCurrentPage] = useState(1)
     const [itemsPerPage] = useState(5) // Same as users page for consistency
@@ -94,10 +110,10 @@ export default function TransactionsPage() {
                             <Table>
                                 <TableHeader>
                                     <TableRow>
-                                        <TableHead className="w-[100px]">ID</TableHead>
                                         <TableHead>Transaction ID</TableHead>
                                         <TableHead>Amount</TableHead>
-                                        <TableHead>Type</TableHead>
+                                        <TableHead>DineIn</TableHead>
+                                        <TableHead>Table Id</TableHead>
                                         <TableHead>Date</TableHead>
                                     </TableRow>
                                 </TableHeader>
@@ -110,21 +126,24 @@ export default function TransactionsPage() {
                                         </TableRow>
                                     ) : (
                                         currentTransactions.map((transaction, index) => (
-                                            <TableRow key={transaction.id}>
-                                                <TableCell className="font-medium">{indexOfFirstItem + index + 1}</TableCell>
-                                                <TableCell>{transaction.transactionId}</TableCell>
-                                                <TableCell className={transaction.type === "Income" ? "text-green-600" : "text-red-600"}>
+                                            <TableRow key={index}>
+                                                <TableCell>{transaction._id}</TableCell>
+                                                {/* <TableCell className={transaction.type === "Income" ? "text-green-600" : "text-red-600"}>
                                                     {transaction.type === "Income" ? "+" : "-"} ${transaction.amount.toFixed(2)}
-                                                </TableCell>
-                                                <TableCell>
+                                                </TableCell> */}
+                                                {/* <TableCell>
                                                     <span
                                                         className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${transaction.type === "Income" ? "bg-green-100 text-green-800" : "bg-red-100 text-red-800"
                                                             }`}
                                                     >
                                                         {transaction.type}
                                                     </span>
-                                                </TableCell>
-                                                <TableCell>{transaction.date}</TableCell>
+                                                </TableCell> */}
+                                                <TableCell>{transaction.totalAmount}</TableCell>
+                                                <TableCell>{transaction.dineIn === true ? <span> Yes</span> : <span>No</span>}</TableCell>
+                                                <TableCell>{transaction.table_id}</TableCell>
+                                                <TableCell>{moment(transaction.createdAt).format('MMMM Do YYYY, h:mm:ss a')
+                                                }</TableCell>
                                             </TableRow>
                                         ))
                                     )}

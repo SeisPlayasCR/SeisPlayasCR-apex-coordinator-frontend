@@ -5,7 +5,6 @@ import { useForm } from "react-hook-form"
 import { zodResolver } from "@hookform/resolvers/zod"
 import * as z from "zod"
 import { Plus, Printer, Search } from "lucide-react"
-
 import { Button } from "@/components/ui/button"
 import {
     Dialog,
@@ -21,8 +20,12 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table"
 import { Card, CardContent } from "@/components/ui/card"
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip"
+import { useMutation } from "@tanstack/react-query"
+import { sendToFactura } from "@/utils/services/services"
+import { toast } from "sonner"
 
 const userSchema = z.object({
+    transactionId: z.string().min(3, "Please Enter Id"),
     name: z.string().min(2, "Name must be at least 2 characters"),
     email: z.string().email("Please enter a valid email address"),
     userId: z.string().min(3, "User ID must be at least 3 characters"),
@@ -31,8 +34,17 @@ const userSchema = z.object({
 
 type UserFormValues = z.infer<typeof userSchema>
 
+interface sendToFacturaInterface {
+    transactionId: string
+    name: string
+    email: string
+    userId: string
+    userType: string
+}
+
 interface User {
     id: string
+    transactionId: string
     name: string
     email: string
     userId: string
@@ -45,6 +57,7 @@ export default function UsersPage() {
     const [users, setUsers] = useState<User[]>([
         {
             id: "1",
+            transactionId: "TRN001",
             name: "John Doe",
             email: "john@example.com",
             userId: "JD001",
@@ -53,6 +66,7 @@ export default function UsersPage() {
         },
         {
             id: "2",
+            transactionId: "TRN002",
             name: "Jane Smith",
             email: "jane@example.com",
             userId: "JS002",
@@ -61,6 +75,7 @@ export default function UsersPage() {
         },
         {
             id: "3",
+            transactionId: "TRN003",
             name: "Mike Johnson",
             email: "mike@example.com",
             userId: "MJ003",
@@ -69,6 +84,7 @@ export default function UsersPage() {
         },
         {
             id: "4",
+            transactionId: "TRN004",
             name: "Mike Johnson",
             email: "mike@example.com",
             userId: "MJ003",
@@ -77,6 +93,7 @@ export default function UsersPage() {
         },
         {
             id: "5",
+            transactionId: "TRN005",
             name: "Mike Johnson",
             email: "mike@example.com",
             userId: "MJ003",
@@ -85,6 +102,7 @@ export default function UsersPage() {
         },
         {
             id: "6",
+            transactionId: "TRN006",
             name: "Mike Johnson",
             email: "mike@example.com",
             userId: "MJ003",
@@ -93,6 +111,7 @@ export default function UsersPage() {
         },
         {
             id: "7",
+            transactionId: "TRN007",
             name: "Mike Johnson",
             email: "mike@example.com",
             userId: "MJ003",
@@ -100,7 +119,6 @@ export default function UsersPage() {
             createdAt: "2024-01-17",
         },
     ])
-
     const [currentPage, setCurrentPage] = useState(1)
     const [itemsPerPage] = useState(5)
 
@@ -113,6 +131,7 @@ export default function UsersPage() {
     const form = useForm<UserFormValues>({
         resolver: zodResolver(userSchema),
         defaultValues: {
+            transactionId: "",
             name: "",
             email: "",
             userId: "",
@@ -120,54 +139,67 @@ export default function UsersPage() {
         },
     })
 
+    // Initialize useMutation hook
+    const { mutate, isPending } = useMutation({
+        mutationFn: (data: sendToFacturaInterface) => sendToFactura(data),
+        onSuccess: (data) => {
+            console.log("User added successfully:", data)
+            // Optional: Show success toast
+            toast.success("User added successfully!")
+
+            // Reset form and close dialog
+            form.reset()
+            setOpen(false)
+        },
+        onError: (error) => {
+            console.error("Error adding user:", error)
+            // Optional: Show error toast
+            toast.error("Failed to add user. Please try again.")
+        },
+    })
+
+
     const onSubmit = async (data: UserFormValues) => {
-        const newUser: User = {
-            id: Date.now().toString(),
-            ...data,
-            createdAt: new Date().toISOString().split("T")[0],
-        }
+        console.log("Form submitted with data:", data)
 
-        setUsers([...users, newUser])
-        form.reset()
-        setOpen(false)
+        //     // Transform data to match API interface
+        //     const apiData: sendToFacturaInterface = {
+        //         transactionId: data.transactionId,
+        //         name: data.name,
+        //         email: data.email,
+        //         userId: data.userId,
+        //         userType: data.userType,
+        //     }
+
+        //     // Call mutation
+        await mutate(data)
     }
-
-    // const handlePrintTable = () => {
-    //     const printContent = document.getElementById("users-table")
-    //     const originalContent = document.body.innerHTML
-
-    //     if (printContent) {
-    //         document.body.innerHTML = printContent.outerHTML
-    //         window.print()
-    //         document.body.innerHTML = originalContent
-    //         window.location.reload()
-    //     }
-    // }
 
     const handlePrintUser = (user: User) => {
         const printWindow = window.open("", "_blank")
         if (printWindow) {
             printWindow.document.write(`
-        <html>
-          <head>
-            <title>User Details - ${user.name}</title>
-            <style>
-              body { font-family: sans-serif; padding: 20px; }
-              h1 { color: #333; }
-              p { margin-bottom: 10px; }
-              strong { display: inline-block; width: 100px; }
-            </style>
-          </head>
-          <body>
-            <h1>User Details</h1>
-            <p><strong>Name:</strong> ${user.name}</p>
-            <p><strong>Email:</strong> ${user.email}</p>
-            <p><strong>User ID:</strong> ${user.userId}</p>
-            <p><strong>User Type:</strong> ${user.userType}</p>
-            <p><strong>Created At:</strong> ${user.createdAt}</p>
-          </body>
-        </html>
-      `)
+          <html>
+            <head>
+              <title>User Details - ${user.name}</title>
+              <style>
+                body { font-family: sans-serif; padding: 20px; }
+                h1 { color: #333; }
+                p { margin-bottom: 10px; }
+                strong { display: inline-block; width: 100px; }
+              </style>
+            </head>
+            <body>
+              <h1>User Details</h1>
+              <p><strong>Transaction ID:</strong> ${user.transactionId}</p>
+              <p><strong>Name:</strong> ${user.name}</p>
+              <p><strong>Email:</strong> ${user.email}</p>
+              <p><strong>User ID:</strong> ${user.userId}</p>
+              <p><strong>User Type:</strong> ${user.userType}</p>
+              <p><strong>Created At:</strong> ${user.createdAt}</p>
+            </body>
+          </html>
+        `)
             printWindow.document.close()
             printWindow.print()
         }
@@ -199,6 +231,21 @@ export default function UsersPage() {
                                     <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6">
                                         <FormField
                                             control={form.control}
+                                            name="transactionId"
+                                            render={({ field }) => (
+                                                <FormItem>
+                                                    <FormLabel>Transaction Id</FormLabel>
+                                                    <FormControl>
+                                                        <div className="relative">
+                                                            <Input placeholder="Enter transactionId" {...field} className="pr-10" />
+                                                        </div>
+                                                    </FormControl>
+                                                    <FormMessage />
+                                                </FormItem>
+                                            )}
+                                        />
+                                        <FormField
+                                            control={form.control}
                                             name="name"
                                             render={({ field }) => (
                                                 <FormItem>
@@ -213,7 +260,6 @@ export default function UsersPage() {
                                                 </FormItem>
                                             )}
                                         />
-
                                         <FormField
                                             control={form.control}
                                             name="email"
@@ -227,7 +273,6 @@ export default function UsersPage() {
                                                 </FormItem>
                                             )}
                                         />
-
                                         <FormField
                                             control={form.control}
                                             name="userId"
@@ -241,7 +286,6 @@ export default function UsersPage() {
                                                 </FormItem>
                                             )}
                                         />
-
                                         <FormField
                                             control={form.control}
                                             name="userType"
@@ -254,24 +298,23 @@ export default function UsersPage() {
                                                                 <SelectValue placeholder="Select user type" />
                                                             </SelectTrigger>
                                                         </FormControl>
-                                                        <SelectContent>
-                                                            <SelectItem value="Admin">Admin</SelectItem>
-                                                            <SelectItem value="User">User</SelectItem>
-                                                            <SelectItem value="Moderator">Moderator</SelectItem>
-                                                            <SelectItem value="Guest">Guest</SelectItem>
+                                                        <SelectContent className="w-full">
+                                                            <SelectItem value="01">01</SelectItem>
+                                                            <SelectItem value="02">02</SelectItem>
+                                                            <SelectItem value="03">03</SelectItem>
+                                                            <SelectItem value="04">04</SelectItem>
                                                         </SelectContent>
                                                     </Select>
                                                     <FormMessage />
                                                 </FormItem>
                                             )}
                                         />
-
                                         <div className="flex justify-end space-x-3 pt-4">
                                             <Button type="button" variant="outline" onClick={() => setOpen(false)}>
                                                 Cancel
                                             </Button>
-                                            <Button type="submit" disabled={form.formState.isSubmitting}>
-                                                {form.formState.isSubmitting ? "Adding..." : "Add User"}
+                                            <Button type="submit" disabled={isPending}>
+                                                {isPending ? "Adding..." : "Add User"}
                                             </Button>
                                         </div>
                                     </form>
@@ -280,16 +323,15 @@ export default function UsersPage() {
                         </Dialog>
                     </div>
                 </div>
-
                 {/* Users Table */}
                 <Card>
-
                     <CardContent>
                         <div id="users-table">
                             <Table>
                                 <TableHeader>
                                     <TableRow>
                                         <TableHead className="w-[100px]">ID</TableHead>
+                                        <TableHead>Transaction ID</TableHead>
                                         <TableHead>Name</TableHead>
                                         <TableHead>Email</TableHead>
                                         <TableHead>User ID</TableHead>
@@ -301,7 +343,7 @@ export default function UsersPage() {
                                 <TableBody>
                                     {users.length === 0 ? (
                                         <TableRow>
-                                            <TableCell colSpan={7} className="text-center py-8 text-gray-500">
+                                            <TableCell colSpan={8} className="text-center py-8 text-gray-500">
                                                 No users found. Add a new user to get started.
                                             </TableCell>
                                         </TableRow>
@@ -309,6 +351,7 @@ export default function UsersPage() {
                                         currentUsers.map((user, index) => (
                                             <TableRow key={user.id}>
                                                 <TableCell className="font-medium">{indexOfFirstItem + index + 1}</TableCell>
+                                                <TableCell>{user.transactionId}</TableCell>
                                                 <TableCell>{user.name}</TableCell>
                                                 <TableCell>{user.email}</TableCell>
                                                 <TableCell>{user.userId}</TableCell>
@@ -393,6 +436,6 @@ export default function UsersPage() {
                     )}
                 </Card>
             </div>
-        </div >
+        </div>
     )
 }
