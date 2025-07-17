@@ -132,7 +132,7 @@ export default function LoginPage() {
                                 {errors.password && <p className="mt-1 text-sm text-red-600">{errors.password.message}</p>}
                             </div>
 
-                            <div className="flex items-center justify-between">
+                            {/* <div className="flex items-center justify-between">
                                 <div className="flex items-center">
                                     <input
                                         id="remember"
@@ -146,7 +146,7 @@ export default function LoginPage() {
                                 <Link href="/forgot-password" className="text-sm text-blue-600 hover:text-blue-500">
                                     ¿Olvidaste tu contraseña?
                                 </Link>
-                            </div>
+                            </div> */}
 
                             <button
                                 type="submit"
