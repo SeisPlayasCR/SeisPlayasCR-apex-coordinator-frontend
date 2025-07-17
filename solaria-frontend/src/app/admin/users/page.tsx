@@ -5,7 +5,6 @@ import type React from "react";
 import { useState, useEffect, useRef } from "react";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
-import * as z from "zod";
 import { Plus, Printer, Search } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import {
@@ -27,22 +26,35 @@ import { toast } from "sonner";
 import moment from "moment";
 import JSZip from "jszip";
 import { saveAs } from "file-saver";
+import * as z from "zod"
 
 // ----------------------
 // 🔒 Validation Schema
 // ----------------------
-const userSchema = z.object({
-    transactionId: z.string().min(3, "Please Enter Id"),
-    name: z.string().min(2, "Name must be at least 2 characters"),
-    email: z.string().email("Please enter a valid email address"),
-    userId: z.string().min(3, "User ID must be at least 3 characters"),
-    businessId: z.string().min(3, "Business ID must be at least 3 characters"),
-    phoneNumber: z
-        .string()
-        .min(10, "Phone number must be at least 10 digits")
-        .max(15, "Phone number cannot exceed 15 digits"),
-    code: z.string().min(2, "Country code is required"),
-});
+
+const userSchema = z
+    .object({
+        transactionId: z.string().min(3, "Please Enter Id"),
+        name: z.string().min(2, "Name must be at least 2 characters"),
+        email: z.string().email("Please enter a valid email address"),
+        userId: z.string().min(3, "User ID must be at least 3 characters"),
+        phoneNumber: z.string().min(10).max(15),
+        code: z.string().min(2),
+        isBusiness: z.enum(["true", "false"]),
+        businessName: z.string().optional(),
+    })
+    .refine(
+        (data) => {
+            if (data.isBusiness === "true") {
+                return !!data.businessName?.trim();
+            }
+            return true;
+        },
+        {
+            path: ["businessName"],
+            message: "El nombre de la empresa es obligatorio.",
+        }
+    );
 
 export type UserFormValues = z.infer<typeof userSchema>;
 
@@ -74,9 +86,10 @@ interface SendToFacturaPayload {
     name: string;
     email: string;
     userId: string;
-    businessId: string;
     phoneNumber: string;
     code: string;
+    isBusiness: string;
+    BusinessName: string; // Note: Capital B to match API
 }
 
 export interface User {
@@ -86,7 +99,6 @@ export interface User {
     email: string;
     role: string;
     createdAt: string;
-    businessId?: string;
     phoneNumber?: string;
     facturas?: { path: string }[];
 }
@@ -123,12 +135,12 @@ export default function UsersPage() {
             name: "",
             email: "",
             userId: "",
-            businessId: "",
             phoneNumber: "",
             code: "+1",
+            isBusiness: "false",
+            businessName: "",
         },
     });
-
     // ----------------------
     // 🔗 React‑Query – add user
     // ----------------------
@@ -143,8 +155,21 @@ export default function UsersPage() {
         onError: () => toast.error("Failed to add user. Please try again."),
     });
 
-    const onSubmit = (data: UserFormValues) => mutate(data);
+    const onSubmit = (data: UserFormValues) => {
+        const payload: SendToFacturaPayload = {
+            transactionId: data.transactionId,
+            name: data.name,
+            email: data.email,
+            userId: data.userId,
+            phoneNumber: data.phoneNumber,
+            code: data.code,
+            isBusiness: data.isBusiness,
+            BusinessName: data.businessName || "",
+        };
 
+        console.log("Submitting payload:", payload);
+        mutate(payload);
+    }
     // ----------------------
     // 🔗 React‑Query – fetch users
     // ----------------------
@@ -173,7 +198,6 @@ export default function UsersPage() {
             setShowSuggestions(false);
             form.setValue("email", "");
             form.setValue("userId", "");
-            form.setValue("businessId", "");
             form.setValue("phoneNumber", "");
         }
     };
@@ -182,7 +206,6 @@ export default function UsersPage() {
         form.setValue("name", user.name, { shouldValidate: true });
         form.setValue("email", user.email);
         form.setValue("userId", user._id);
-        form.setValue("businessId", user.businessId || "");
         form.setValue("phoneNumber", user.phoneNumber || "");
         setShowSuggestions(false);
     };
@@ -340,7 +363,7 @@ export default function UsersPage() {
                                         name="userId"
                                         render={({ field }) => (
                                             <FormItem>
-                                                <FormLabel>ID de usuario</FormLabel>
+                                                <FormLabel>ID de usuario | Business ID</FormLabel>
                                                 <FormControl>
                                                     <Input placeholder="Ingrese un ID de usuario único" {...field} />
                                                 </FormControl>
@@ -350,19 +373,57 @@ export default function UsersPage() {
                                     />
 
                                     {/* Business ID */}
+
                                     <FormField
                                         control={form.control}
-                                        name="businessId"
+                                        name="isBusiness"
                                         render={({ field }) => (
                                             <FormItem>
-                                                <FormLabel>ID de empresa</FormLabel>
+                                                <FormLabel>¿Es una empresa?</FormLabel>
                                                 <FormControl>
-                                                    <Input placeholder="Ingrese el ID de empresa" {...field} />
+                                                    <div className="flex items-center space-x-4">
+                                                        <label className="flex items-center space-x-2">
+                                                            <input
+                                                                type="radio"
+                                                                value="true"
+                                                                checked={field.value === "true"}
+                                                                onChange={() => field.onChange("true")}
+                                                            />
+                                                            <span>Sí</span>
+                                                        </label>
+                                                        <label className="flex items-center space-x-2">
+                                                            <input
+                                                                type="radio"
+                                                                value="false"
+                                                                checked={field.value === "false"}
+                                                                onChange={() => field.onChange("false")}
+                                                            />
+                                                            <span>No</span>
+                                                        </label>
+                                                    </div>
                                                 </FormControl>
                                                 <FormMessage />
                                             </FormItem>
                                         )}
                                     />
+
+                                    {/* Business Name (optional) */}
+                                    {form.watch("isBusiness") === "true" && (
+                                        <FormField
+                                            control={form.control}
+                                            name="businessName"
+                                            render={({ field }) => (
+                                                <FormItem>
+                                                    <FormLabel>Nombre de empresa</FormLabel>
+                                                    <FormControl>
+                                                        <Input placeholder="Ingrese el nombre de la empresa" {...field} />
+                                                    </FormControl>
+                                                    <FormMessage />
+                                                </FormItem>
+                                            )}
+                                        />
+                                    )}
+
 
                                     {/* Phone number + code */}
                                     <FormField
