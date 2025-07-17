@@ -145,7 +145,12 @@ export default function UsersPage() {
     // 🔗 React‑Query – add user
     // ----------------------
     const { mutate, isPending } = useMutation({
-        mutationFn: (data: SendToFacturaPayload) => sendToFactura(data),
+        mutationFn: (data: SendToFacturaPayload) =>
+            // Convert isBusiness from string to boolean before sending
+            sendToFactura({
+                ...data,
+                isBusiness: data.isBusiness === "true",
+            }),
         onSuccess: () => {
             toast.success("User added successfully!");
             form.reset();
