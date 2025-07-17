@@ -1,13 +1,13 @@
-"use client"
+"use client";
 
-import type React from "react"
+import type React from "react";
 
-import { useState, useEffect, useRef } from "react"
-import { useForm } from "react-hook-form"
-import { zodResolver } from "@hookform/resolvers/zod"
-import * as z from "zod"
-import { Plus, Printer, Search } from "lucide-react"
-import { Button } from "@/components/ui/button"
+import { useState, useEffect, useRef } from "react";
+import { useForm } from "react-hook-form";
+import { zodResolver } from "@hookform/resolvers/zod";
+import * as z from "zod";
+import { Plus, Printer, Search } from "lucide-react";
+import { Button } from "@/components/ui/button";
 import {
     Dialog,
     DialogContent,
@@ -15,20 +15,22 @@ import {
     DialogHeader,
     DialogTitle,
     DialogTrigger,
-} from "@/components/ui/dialog"
-import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form"
-import { Input } from "@/components/ui/input"
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table"
-import { Card, CardContent } from "@/components/ui/card"
-import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip"
-import { useMutation, useQuery } from "@tanstack/react-query"
-import { getAllCustomers, sendToFactura } from "@/utils/services/services"
-import { toast } from "sonner"
-import moment from "moment"
-import JSZip from "jszip"
-import { saveAs } from "file-saver"
-import { useQueryClient } from "@tanstack/react-query" // Added useQueryClient import
+} from "@/components/ui/dialog";
+import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form";
+import { Input } from "@/components/ui/input";
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
+import { Card, CardContent } from "@/components/ui/card";
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import { getAllCustomers, sendToFactura } from "@/utils/services/services";
+import { toast } from "sonner";
+import moment from "moment";
+import JSZip from "jszip";
+import { saveAs } from "file-saver";
 
+// ----------------------
+// 🔒 Validation Schema
+// ----------------------
 const userSchema = z.object({
     transactionId: z.string().min(3, "Please Enter Id"),
     name: z.string().min(2, "Name must be at least 2 characters"),
@@ -40,9 +42,11 @@ const userSchema = z.object({
         .min(10, "Phone number must be at least 10 digits")
         .max(15, "Phone number cannot exceed 15 digits"),
     code: z.string().min(2, "Country code is required"),
-})
+});
 
-type UserFormValues = z.infer<typeof userSchema>
+export type UserFormValues = z.infer<typeof userSchema>;
+
+// Popular country codes first
 const countryCodes = [
     { code: "+1", country: "United States", flag: "🇺🇸", popular: true },
     { code: "+1", country: "Canada", flag: "🇨🇦", popular: true },
@@ -60,49 +64,58 @@ const countryCodes = [
     { code: "+52", country: "Mexico", flag: "🇲🇽", popular: true },
     { code: "+7", country: "Russia", flag: "🇷🇺", popular: true },
     { code: "+92", country: "Pakistan", flag: "🇵🇰", popular: false },
-    // ... rest of the countries from your list
-]
+];
 
-interface sendToFacturaInterface {
-    transactionId: string
-    name: string
-    email: string
-    userId: string
-    businessId: string
-    phoneNumber: string
-    code: string
+// ----------------------
+// 🔒 Interfaces
+// ----------------------
+interface SendToFacturaPayload {
+    transactionId: string;
+    name: string;
+    email: string;
+    userId: string;
+    businessId: string;
+    phoneNumber: string;
+    code: string;
 }
 
-interface User {
-    _id: string
-    customerId: string // This seems to be the transaction ID in your table
-    name: string
-    email: string
-    role: string // This maps to userType
-    createdAt: string // Uncommented for use in table
-    businessId?: string // Added for auto-population
-    phoneNumber?: string // Added for auto-population
-    facturas?: { path: string }[] // Added for download functionality
+export interface User {
+    _id: string;
+    customerId: string; // transactionId
+    name: string;
+    email: string;
+    role: string;
+    createdAt: string;
+    businessId?: string;
+    phoneNumber?: string;
+    facturas?: { path: string }[];
 }
 
 export default function UsersPage() {
-    const queryClient = useQueryClient() // Initialized useQueryClient
-    const [open, setOpen] = useState(false)
-    const [users, setUsers] = useState<User[]>([])
-    const [currentPage, setCurrentPage] = useState(1)
-    const [itemsPerPage] = useState(5)
-    const [filteredUsers, setFilteredUsers] = useState<User[]>([])
-    const [showSuggestions, setShowSuggestions] = useState(false)
-    const nameInputRef = useRef<HTMLInputElement>(null)
-    const [mounted, setMounted] = useState(false) // New state for hydration fix
+    // ----------------------
+    // 🛠️ Hooks & State
+    // ----------------------
+    const queryClient = useQueryClient();
+    const [open, setOpen] = useState(false);
+    const [users, setUsers] = useState<User[]>([]);
+    const [currentPage, setCurrentPage] = useState(1);
+    const [itemsPerPage] = useState(5);
+    const [filteredUsers, setFilteredUsers] = useState<User[]>([]);
+    const [showSuggestions, setShowSuggestions] = useState(false);
+    const [mounted, setMounted] = useState(false);
 
-    // Calculate pagination
-    const indexOfLastItem = currentPage * itemsPerPage
-    const indexOfFirstItem = indexOfLastItem - itemsPerPage
-    const currentUsers = users.slice(indexOfFirstItem, indexOfLastItem)
-    const totalPages = Math.ceil(users.length / itemsPerPage)
+    // 🔑 Suggestions dropdown wrapper (input + list)
+    const wrapperRef = useRef<HTMLDivElement>(null);
 
+    // Pagination helpers
+    const indexOfLastItem = currentPage * itemsPerPage;
+    const indexOfFirstItem = indexOfLastItem - itemsPerPage;
+    const currentUsers = users.slice(indexOfFirstItem, indexOfLastItem);
+    const totalPages = Math.ceil(users.length / itemsPerPage);
 
+    // ----------------------
+    // 📝 React‑Hook‑Form
+    // ----------------------
     const form = useForm<UserFormValues>({
         resolver: zodResolver(userSchema),
         defaultValues: {
@@ -114,113 +127,112 @@ export default function UsersPage() {
             phoneNumber: "",
             code: "+1",
         },
-    })
+    });
 
-    // Initialize useMutation hook
+    // ----------------------
+    // 🔗 React‑Query – add user
+    // ----------------------
     const { mutate, isPending } = useMutation({
-        mutationFn: (data: sendToFacturaInterface) => sendToFactura(data),
-        onSuccess: (data) => {
-            console.log("User added successfully:", data)
-            toast.success("User added successfully!")
-            form.reset()
-            setOpen(false)
-            queryClient.invalidateQueries({ queryKey: ["getAllCustomers"] })
+        mutationFn: (data: SendToFacturaPayload) => sendToFactura(data),
+        onSuccess: () => {
+            toast.success("User added successfully!");
+            form.reset();
+            setOpen(false);
+            queryClient.invalidateQueries({ queryKey: ["getAllCustomers"] });
         },
-        onError: (error) => {
-            console.error("Error adding user:", error)
-            toast.error("Failed to add user. Please try again.")
-        },
-    })
+        onError: () => toast.error("Failed to add user. Please try again."),
+    });
 
-    const onSubmit = async (data: UserFormValues) => {
-        console.log("Form submitted with data:", data)
-        await mutate(data)
-    }
+    const onSubmit = (data: UserFormValues) => mutate(data);
 
-    const { data, isSuccess } = useQuery({ queryKey: ["getAllCustomers"], queryFn: getAllCustomers })
+    // ----------------------
+    // 🔗 React‑Query – fetch users
+    // ----------------------
+    const { data, isSuccess } = useQuery({ queryKey: ["getAllCustomers"], queryFn: getAllCustomers });
 
     useEffect(() => {
-        if (data) {
-            setUsers(data.result)
-        }
-    }, [isSuccess, data])
+        if (isSuccess && data) setUsers(data.result);
+    }, [isSuccess, data]);
 
-    useEffect(() => {
-        setMounted(true)
-    }, [])
+    // Ensure moment only runs client‑side
+    useEffect(() => setMounted(true), []);
 
+    // ----------------------
+    // 🔍 Autocomplete helpers
+    // ----------------------
     const handleNameInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-        const value = e.target.value
-        form.setValue("name", value)
-        if (value.length > 0) {
-            const filtered = users.filter((user) => user.name.toLowerCase().includes(value.toLowerCase()))
-            setFilteredUsers(filtered)
-            setShowSuggestions(true)
+        const value = e.target.value;
+        form.setValue("name", value);
+
+        if (value) {
+            const f = users.filter((u) => u.name.toLowerCase().includes(value.toLowerCase()));
+            setFilteredUsers(f);
+            setShowSuggestions(true);
         } else {
-            setFilteredUsers([])
-            setShowSuggestions(false)
-            form.setValue("email", "")
-            form.setValue("userId", "")
-            form.setValue("businessId", "")
-            form.setValue("phoneNumber", "")
+            setFilteredUsers([]);
+            setShowSuggestions(false);
+            form.setValue("email", "");
+            form.setValue("userId", "");
+            form.setValue("businessId", "");
+            form.setValue("phoneNumber", "");
         }
-    }
+    };
 
     const handleSelectUser = (user: User) => {
-        form.setValue("name", user.name)
-        form.setValue("email", user.email)
-        form.setValue("userId", user._id) // Assuming _id is the userId
-        form.setValue("businessId", user.businessId || "") // Populate if available
-        form.setValue("phoneNumber", user.phoneNumber || "") // Populate if available
-        setShowSuggestions(false)
-        setFilteredUsers([])
-    }
+        form.setValue("name", user.name, { shouldValidate: true });
+        form.setValue("email", user.email);
+        form.setValue("userId", user._id);
+        form.setValue("businessId", user.businessId || "");
+        form.setValue("phoneNumber", user.phoneNumber || "");
+        setShowSuggestions(false);
+    };
 
-    // Close suggestions when clicking outside
+    // Close suggestions only when clicking *outside* the wrapper (input + list)
     useEffect(() => {
-        const handleClickOutside = (event: MouseEvent) => {
-            if (nameInputRef.current && !nameInputRef.current.contains(event.target as Node)) {
-                setShowSuggestions(false)
+        const listener = (e: MouseEvent) => {
+            if (wrapperRef.current && !wrapperRef.current.contains(e.target as Node)) {
+                setShowSuggestions(false);
             }
-        }
-        document.addEventListener("mousedown", handleClickOutside)
-        return () => {
-            document.removeEventListener("mousedown", handleClickOutside)
-        }
-    }, [])
+        };
 
+        document.addEventListener("click", listener);
+        return () => document.removeEventListener("click", listener);
+    }, []);
+
+    // ----------------------
+    // 📦 Download facturas
+    // ----------------------
     const downloadFacturas = async (facturas: { path: string }[]) => {
         if (!facturas?.length) {
-            alert("No facturas found.")
-            return
+            toast.error("No facturas found.");
+            return;
         }
-        const zip = new JSZip()
-        const folder = zip.folder("facturas")
-        const API_URL = process.env.NEXT_PUBLIC_API_URL || "http://127.0.0.1:4003"
+
+        const zip = new JSZip();
+        const folder = zip.folder("facturas");
+        const API_URL = process.env.NEXT_PUBLIC_API_URL || "http://127.0.0.1:4003";
 
         for (const { path } of facturas) {
-            const fileName = path.split("/").pop() || "factura.pdf"
-            const fileUrl = `${API_URL}${path}`
+            const fileName = path.split("/").pop() || "factura.pdf";
+            const fileUrl = `${API_URL}${path}`;
+
             try {
-                const response = await fetch(fileUrl)
-                if (!response.ok) throw new Error(`Failed to fetch: ${fileUrl}`)
-                const blob = await response.blob()
-                folder?.file(fileName, blob)
+                const res = await fetch(fileUrl);
+                if (!res.ok) throw new Error("Fetch failed");
+                folder?.file(fileName, await res.blob());
             } catch (err) {
-                console.error(`Failed to download ${fileUrl}`, err)
+                console.error(`❌ Failed to download ${fileUrl}`, err);
             }
         }
 
-        zip
-            .generateAsync({ type: "blob" })
-            .then((content) => {
-                saveAs(content, "facturas.zip")
-            })
-            .catch((err) => {
-                console.error("Failed to generate zip", err)
-            })
-    }
-    const countryCode = form.watch("code")
+        zip.generateAsync({ type: "blob" }).then((content) => saveAs(content, "facturas.zip"));
+    };
+
+    const countryCode = form.watch("code");
+
+    // ----------------------
+    // 🖼️ JSX
+    // ----------------------
     return (
         <div className="container mx-auto py-8 px-4">
             <div className="flex flex-col space-y-6">
@@ -230,13 +242,14 @@ export default function UsersPage() {
                         <h1 className="text-3xl font-bold text-gray-900">Gestión de usuarios</h1>
                         <p className="text-gray-600 mt-1">Administrar y ver todas las usuarios del sistema.</p>
                     </div>
+                    {/* Add user dialog */}
                     <Dialog open={open} onOpenChange={setOpen}>
                         <DialogTrigger asChild>
                             <Button className="flex items-center gap-2">
-                                <Plus className="h-4 w-4" />
-                                Agregar usuario
+                                <Plus className="h-4 w-4" /> Agregar usuario
                             </Button>
                         </DialogTrigger>
+
                         <DialogContent className="sm:max-w-[500px] max-h-[90vh] overflow-y-auto p-6">
                             <DialogHeader>
                                 <DialogTitle>Agregar nuevo usuario</DialogTitle>
@@ -244,8 +257,13 @@ export default function UsersPage() {
                                     Complete los datos a continuación para crear una nueva cuenta de usuario.
                                 </DialogDescription>
                             </DialogHeader>
+
+                            {/* ------------------ */}
+                            {/* Form */}
+                            {/* ------------------ */}
                             <Form {...form}>
                                 <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6">
+                                    {/* Transaction ID */}
                                     <FormField
                                         control={form.control}
                                         name="transactionId"
@@ -253,54 +271,44 @@ export default function UsersPage() {
                                             <FormItem>
                                                 <FormLabel>ID de transacción</FormLabel>
                                                 <FormControl>
-                                                    <div className="relative">
-                                                        <Input placeholder="Ingrese el ID de transacción" {...field} className="pr-10" />
-                                                    </div>
+                                                    <Input placeholder="Ingrese el ID de transacción" {...field} className="pr-10" />
                                                 </FormControl>
                                                 <FormMessage />
                                             </FormItem>
                                         )}
                                     />
+
+                                    {/* Name + autocomplete */}
                                     <FormField
                                         control={form.control}
                                         name="name"
                                         render={({ field }) => (
                                             <FormItem>
                                                 <FormLabel>Nombre</FormLabel>
-                                                {/* New relative container for the input and its dropdown */}
-                                                <div className="relative">
+                                                <div className="relative" ref={wrapperRef}>
+                                                    {/* Input */}
                                                     <FormControl>
-                                                        {/* This div is for the input and icon positioning */}
                                                         <div className="relative">
                                                             <Input
                                                                 placeholder="Ingrese el nombre del usuario o busque..."
                                                                 {...field}
-                                                                ref={(el) => {
-                                                                    nameInputRef.current = el
-                                                                    if (typeof field.ref === "function") {
-                                                                        field.ref(el)
-                                                                    } else if (field.ref && typeof field.ref === "object" && "current" in field.ref) {
-                                                                        // @ts-expect-error: field.ref may not be typed correctly
-                                                                        field.ref.current = el
-                                                                    }
-                                                                }}
                                                                 onChange={handleNameInputChange}
-                                                                className="pr-10"
                                                                 onFocus={() => setShowSuggestions(true)}
+                                                                className="pr-10"
                                                             />
-                                                            <Search className="absolute right-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-gray-400" />
+                                                            <Search className="absolute right-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400" />
                                                         </div>
                                                     </FormControl>
+                                                    {/* Dropdown */}
                                                     {showSuggestions && filteredUsers.length > 0 && (
-                                                        <div className="absolute z-10 w-full bg-white border border-gray-200 rounded-md shadow-lg top-full mt-1 max-h-48 overflow-y-auto">
-                                                            {/* top-full positions it right below the parent div (the new relative div) */}
-                                                            {filteredUsers.map((user) => (
+                                                        <div className="absolute z-20 w-full bg-white border border-gray-200 rounded-md shadow-lg top-full mt-1 max-h-48 overflow-y-auto">
+                                                            {filteredUsers.map((u) => (
                                                                 <div
-                                                                    key={user._id}
+                                                                    key={u._id}
                                                                     className="px-4 py-2 cursor-pointer hover:bg-gray-100"
-                                                                    onClick={() => handleSelectUser(user)}
+                                                                    onMouseDown={() => handleSelectUser(u)} // ✅ use onMouseDown so selection fires before click‑outside closes
                                                                 >
-                                                                    {user.name} ({user.email})
+                                                                    {u.name} ({u.email})
                                                                 </div>
                                                             ))}
                                                         </div>
@@ -310,6 +318,8 @@ export default function UsersPage() {
                                             </FormItem>
                                         )}
                                     />
+
+                                    {/* Email */}
                                     <FormField
                                         control={form.control}
                                         name="email"
@@ -323,6 +333,8 @@ export default function UsersPage() {
                                             </FormItem>
                                         )}
                                     />
+
+                                    {/* User ID */}
                                     <FormField
                                         control={form.control}
                                         name="userId"
@@ -336,6 +348,8 @@ export default function UsersPage() {
                                             </FormItem>
                                         )}
                                     />
+
+                                    {/* Business ID */}
                                     <FormField
                                         control={form.control}
                                         name="businessId"
@@ -349,6 +363,8 @@ export default function UsersPage() {
                                             </FormItem>
                                         )}
                                     />
+
+                                    {/* Phone number + code */}
                                     <FormField
                                         control={form.control}
                                         name="phoneNumber"
@@ -357,33 +373,33 @@ export default function UsersPage() {
                                                 <FormLabel>Número de teléfono</FormLabel>
                                                 <FormControl>
                                                     <div className="flex gap-2">
+                                                        {/* Country code */}
                                                         <select
                                                             value={countryCode}
                                                             onChange={(e) => {
-                                                                const selectedCode = e.target.value
-                                                                form.setValue("code", selectedCode)
-                                                                const numberPart = field.value.replace(/^\+\d+\s*/, "")
-                                                                form.setValue("phoneNumber", `${selectedCode} ${numberPart}`)
+                                                                const selected = e.target.value;
+                                                                form.setValue("code", selected);
                                                             }}
                                                             className="w-[200px] rounded-md border border-gray-300 bg-white h-10 px-2 text-sm"
                                                         >
                                                             {countryCodes
                                                                 .sort((a, b) => Number(b.popular) - Number(a.popular))
-                                                                .map((c, i) => (
-                                                                    <option key={`${c.code}-${i}`} value={c.code}>
+                                                                .map((c, idx) => (
+                                                                    <option key={`${c.code}-${idx}`} value={c.code}>
                                                                         {c.flag} {c.country} ({c.code})
                                                                     </option>
                                                                 ))}
                                                         </select>
+
+                                                        {/* Phone number input */}
                                                         <Input
                                                             placeholder="3001234567"
                                                             className="flex-1 h-10"
-                                                            value={field.value.replace(/^\+\d+\s*/, "")}
-                                                            onChange={(e) => {
-                                                                const digits = e.target.value.replace(/\D/g, "")
-                                                                form.setValue("phoneNumber", `${digits}`)
-                                                            }}
+                                                            value={field.value}
+                                                            onChange={(e) => field.onChange(e.target.value.replace(/\D/g, ""))}
                                                         />
+
+
                                                     </div>
                                                 </FormControl>
                                                 <FormMessage />
@@ -391,7 +407,7 @@ export default function UsersPage() {
                                         )}
                                     />
 
-
+                                    {/* Actions */}
                                     <div className="flex justify-end space-x-3 pt-4">
                                         <Button type="button" variant="outline" onClick={() => setOpen(false)}>
                                             Cancelar
@@ -404,8 +420,11 @@ export default function UsersPage() {
                             </Form>
                         </DialogContent>
                     </Dialog>
-                </div>
+                </div >
+
+                {/* ------------------ */}
                 {/* Users Table */}
+                {/* ------------------ */}
                 <Card>
                     <CardContent>
                         <div id="users-table">
@@ -429,18 +448,16 @@ export default function UsersPage() {
                                             </TableCell>
                                         </TableRow>
                                     ) : (
-                                        currentUsers.map((user, index) => (
-                                            <TableRow key={index}>
-                                                <TableCell>{user._id}</TableCell>
-                                                <TableCell>{user.customerId}</TableCell>
-                                                <TableCell>{user.name}</TableCell>
-                                                <TableCell>{user.email}</TableCell>
-                                                <TableCell>{user.role}</TableCell>
+                                        currentUsers.map((u) => (
+                                            <TableRow key={u._id}>
+                                                <TableCell>{u._id}</TableCell>
+                                                <TableCell>{u.customerId}</TableCell>
+                                                <TableCell>{u.name}</TableCell>
+                                                <TableCell>{u.email}</TableCell>
+                                                <TableCell>{u.role}</TableCell>
                                                 <TableCell>
-                                                    {/* Conditionally render formatted date only after client mount */}
-                                                    {mounted ? moment(user.createdAt).format("MMMM Do YYYY, h:mm:ss a") : user.createdAt}
+                                                    {mounted ? moment(u.createdAt).format("MMMM Do YYYY, h:mm:ss a") : u.createdAt}
                                                 </TableCell>
-
                                                 <TableCell className="text-right">
                                                     <TooltipProvider>
                                                         <Tooltip>
@@ -448,12 +465,12 @@ export default function UsersPage() {
                                                                 <Button
                                                                     variant="ghost"
                                                                     size="icon"
-                                                                    disabled={!user?.facturas?.length}
-                                                                    onClick={() => user?.facturas?.length && downloadFacturas(user.facturas)}
-                                                                    className={`h-8 w-8 ${!user?.facturas?.length ? "cursor-not-allowed opacity-50" : ""}`}
+                                                                    disabled={!u?.facturas?.length}
+                                                                    onClick={() => u.facturas && downloadFacturas(u.facturas)}
+                                                                    className={`h-8 w-8 ${!u?.facturas?.length ? "cursor-not-allowed opacity-50" : ""}`}
                                                                 >
                                                                     <Printer className="h-4 w-4" />
-                                                                    <span className="sr-only">Download all facturas for {user.name}</span>
+                                                                    <span className="sr-only">Download all facturas for {u.name}</span>
                                                                 </Button>
                                                             </TooltipTrigger>
                                                             <TooltipContent>
@@ -469,6 +486,7 @@ export default function UsersPage() {
                             </Table>
                         </div>
                     </CardContent>
+
                     {/* Pagination */}
                     {users.length > 0 && (
                         <div className="flex items-center justify-between px-6 py-4">
@@ -479,7 +497,7 @@ export default function UsersPage() {
                                 <Button
                                     variant="outline"
                                     size="sm"
-                                    onClick={() => setCurrentPage((prev) => Math.max(prev - 1, 1))}
+                                    onClick={() => setCurrentPage((p) => Math.max(p - 1, 1))}
                                     disabled={currentPage === 1}
                                 >
                                     Previous
@@ -500,7 +518,7 @@ export default function UsersPage() {
                                 <Button
                                     variant="outline"
                                     size="sm"
-                                    onClick={() => setCurrentPage((prev) => Math.min(prev + 1, totalPages))}
+                                    onClick={() => setCurrentPage((p) => Math.min(p + 1, totalPages))}
                                     disabled={currentPage === totalPages}
                                 >
                                     Next
@@ -509,8 +527,7 @@ export default function UsersPage() {
                         </div>
                     )}
                 </Card>
-            </div>
-        </div>
-    )
+            </div >
+        </div >
+    );
 }
-
