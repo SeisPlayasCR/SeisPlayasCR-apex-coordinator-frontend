@@ -17,12 +17,12 @@ const getAllTransaction = async () => {
 interface sendToFacturaInterface {
     transactionId: string
     name: string  // Nombre
-    // userType: string   // Tipo
     userId: string //Numero
     email: string // CorreoElectronico
-    businessId: string
     phoneNumber: string
     code: string
+    isBusiness: boolean
+    BusinessName: string | ""
 }
 
 const sendToFactura = async (data: sendToFacturaInterface) => {
@@ -31,9 +31,10 @@ const sendToFactura = async (data: sendToFacturaInterface) => {
         // Tipo: data.userType,
         Numero: data.userId,
         CorreoElectronico: data.email,
-        businessId: data.businessId,
         phoneNumber: data.phoneNumber,
-        code: data.code
+        code: data.code,
+        isBusiness: data.isBusiness,
+        BusinessName: data.BusinessName
     }
 
     try {
