@@ -407,10 +407,9 @@ export default function UsersPage() {
                 </div>
               )}
               <DialogHeader>
-                <DialogTitle>Agregar nuevo usuario</DialogTitle>
+                <DialogTitle>Generar factura</DialogTitle>
                 <DialogDescription>
-                  Complete los datos a continuación para crear una nueva cuenta
-                  de usuario.
+                Complete la siguiente información para Generar Factura
                 </DialogDescription>
               </DialogHeader>
 
