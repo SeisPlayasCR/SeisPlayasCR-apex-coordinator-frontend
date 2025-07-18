@@ -44,11 +44,13 @@ const sendToFactura = async (data: sendToFacturaInterface) => {
       dataToSend
     );
     return response.data;
-  } catch (error) {
-    console.log(error);
-    throw new Error(
-      error instanceof Error ? error.message : "Error in sending to factura"
-    );
+  } catch (error: any) {
+    console.log(error, "Service Factura Error Message");
+    // Check if error is an AxiosError
+    const errorMessage =
+      error?.response?.data?.message ||
+      (typeof error === "string" ? error : error?.message || "Unknown error");
+    throw new Error(errorMessage);
   }
 };
 
