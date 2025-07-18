@@ -40,12 +40,13 @@ import {
   TooltipTrigger,
 } from "@/components/ui/tooltip";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { getAllCustomers, sendToFactura } from "@/utils/services/services";
+import { getAllCustomers, getAllTransaction, sendToFactura } from "@/utils/services/services";
 import { toast } from "sonner";
 import moment from "moment";
 import JSZip from "jszip";
 import { saveAs } from "file-saver";
 import * as z from "zod";
+import { Spinner } from "../_components/Spinner";
 
 // ----------------------
 // 🔒 Validation Schema
@@ -107,7 +108,10 @@ const userSchema = z
       message: "El ID debe tener al menos 10 dígitos si es una empresa.",
     }
   );
-
+type Transaction = {
+  _id: string;
+  createdAt: string;
+};
 export type UserFormValues = z.infer<typeof userSchema>;
 
 // Popular country codes first
@@ -160,6 +164,9 @@ export interface User {
 }
 
 export default function UsersPage() {
+
+
+
   // ----------------------
   // 🛠️ Hooks & State
   // ----------------------
@@ -171,6 +178,24 @@ export default function UsersPage() {
   const [filteredUsers, setFilteredUsers] = useState<User[]>([]);
   const [showSuggestions, setShowSuggestions] = useState(false);
   const [mounted, setMounted] = useState(false);
+
+
+
+  const [transactioId, setTransactionId] = useState<Transaction[] | []>([])
+
+  const { data: transactionData, isSuccess: transactionSuccess, } = useQuery({
+    queryKey: ["getTransactions"],
+    queryFn: getAllTransaction,
+    refetchInterval: 2000,
+  }
+  );
+  useEffect(() => {
+    if (transactionData) {
+      setTransactionId(transactionData.result.data)
+    }
+
+  }, [transactionSuccess])
+  console.log(transactioId, "Hey I am the ooooo")
 
   // 🔑 Suggestions dropdown wrapper (input + list)
   const wrapperRef = useRef<HTMLDivElement>(null);
@@ -207,13 +232,17 @@ export default function UsersPage() {
         ...data,
         isBusiness: data.isBusiness === "true",
       }),
-    onSuccess: () => {
-      toast.success("User added successfully!");
+    onSuccess: (data) => {
+      toast.success(data.message);
       form.reset();
       setOpen(false);
       queryClient.invalidateQueries({ queryKey: ["getAllCustomers"] });
     },
-    onError: () => toast.error("Failed to Create Factura. Please try again."),
+    onError: (error) => {
+      console.log(error, "Error Message of the Send Factura")
+      toast.error(error.message);
+    }
+
   });
 
   const onSubmit = (data: UserFormValues) => {
@@ -366,11 +395,17 @@ export default function UsersPage() {
           <Dialog open={open} onOpenChange={setOpen}>
             <DialogTrigger asChild>
               <Button className="flex items-center gap-2">
-                <Plus className="h-4 w-4" /> Agregar usuario
+                <Plus className="h-4 w-4" />  Generar factura
+
               </Button>
             </DialogTrigger>
 
-            <DialogContent className="sm:max-w-[500px] max-h-[90vh] overflow-y-auto p-6">
+            <DialogContent className="sm:max-w-[500px] max-h-[90vh] overflow-y-auto p-6 ">
+              {isPending && (
+                <div className="absolute inset-0 z-10 flex items-center justify-center bg-[rgba(0,0,0,0.2)]  ">
+                  <Spinner />
+                </div>
+              )}
               <DialogHeader>
                 <DialogTitle>Agregar nuevo usuario</DialogTitle>
                 <DialogDescription>
@@ -395,11 +430,17 @@ export default function UsersPage() {
                       <FormItem>
                         <FormLabel>ID de transacción</FormLabel>
                         <FormControl>
-                          <Input
-                            placeholder="Ingrese el ID de transacción"
+                          <select
                             {...field}
-                            className="pr-10"
-                          />
+                            className="w-full border rounded px-3 py-2"
+                          >
+                            <option value="">Seleccione un ID</option>
+                            {transactioId && transactioId.map((item: Transaction) => (
+                              <option key={item._id} value={item._id}>
+                                {item._id} — {moment(item.createdAt).format('MMMM Do YYYY, h:mm:ss a')}
+                              </option>
+                            ))}
+                          </select>
                         </FormControl>
                         <FormMessage />
                       </FormItem>
@@ -600,7 +641,7 @@ export default function UsersPage() {
                       Cancelar
                     </Button>
                     <Button type="submit" disabled={isPending}>
-                      {isPending ? "Agregando..." : "Agregar usuario"}
+                      {isPending ? "Generar..." : "Generar factura"}
                     </Button>
                   </div>
                 </form>
@@ -650,8 +691,8 @@ export default function UsersPage() {
                         <TableCell>
                           {mounted
                             ? moment(u.createdAt).format(
-                                "MMMM Do YYYY, h:mm:ss a"
-                              )
+                              "MMMM Do YYYY, h:mm:ss a"
+                            )
                             : u.createdAt}
                         </TableCell>
                         <TableCell className="text-right">
@@ -665,11 +706,10 @@ export default function UsersPage() {
                                   onClick={() =>
                                     u.facturas && downloadFacturas(u.facturas)
                                   }
-                                  className={`h-8 w-8 ${
-                                    !u?.facturas?.length
-                                      ? "cursor-not-allowed opacity-50"
-                                      : ""
-                                  }`}
+                                  className={`h-8 w-8 ${!u?.facturas?.length
+                                    ? "cursor-not-allowed opacity-50"
+                                    : ""
+                                    }`}
                                 >
                                   <Printer className="h-4 w-4" />
                                   <span className="sr-only">
@@ -738,6 +778,6 @@ export default function UsersPage() {
           )}
         </Card>
       </div>
-    </div>
+    </div >
   );
 }
