@@ -40,7 +40,11 @@ import {
   TooltipTrigger,
 } from "@/components/ui/tooltip";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { getAllCustomers, getAllTransaction, sendToFactura } from "@/utils/services/services";
+import {
+  getAllCustomers,
+  getAllTransaction,
+  sendToFactura,
+} from "@/utils/services/services";
 import { toast } from "sonner";
 import moment from "moment";
 import JSZip from "jszip";
@@ -164,9 +168,6 @@ export interface User {
 }
 
 export default function UsersPage() {
-
-
-
   // ----------------------
   // 🛠️ Hooks & State
   // ----------------------
@@ -179,23 +180,19 @@ export default function UsersPage() {
   const [showSuggestions, setShowSuggestions] = useState(false);
   const [mounted, setMounted] = useState(false);
 
+  const [transactioId, setTransactionId] = useState<Transaction[] | []>([]);
 
-
-  const [transactioId, setTransactionId] = useState<Transaction[] | []>([])
-
-  const { data: transactionData, isSuccess: transactionSuccess, } = useQuery({
+  const { data: transactionData, isSuccess: transactionSuccess } = useQuery({
     queryKey: ["getTransactions"],
     queryFn: getAllTransaction,
     refetchInterval: 2000,
-  }
-  );
+  });
   useEffect(() => {
     if (transactionData) {
-      setTransactionId(transactionData.result.data)
+      setTransactionId(transactionData.result.data);
     }
-
-  }, [transactionSuccess])
-  console.log(transactioId, "Hey I am the ooooo")
+  }, [transactionSuccess]);
+  console.log(transactioId, "Hey I am the ooooo");
 
   // 🔑 Suggestions dropdown wrapper (input + list)
   const wrapperRef = useRef<HTMLDivElement>(null);
@@ -239,10 +236,9 @@ export default function UsersPage() {
       queryClient.invalidateQueries({ queryKey: ["getAllCustomers"] });
     },
     onError: (error) => {
-      console.log(error, "Error Message of the Send Factura")
+      console.log(error, "Error Message of the Send Factura");
       toast.error(error.message);
-    }
-
+    },
   });
 
   const onSubmit = (data: UserFormValues) => {
@@ -395,8 +391,7 @@ export default function UsersPage() {
           <Dialog open={open} onOpenChange={setOpen}>
             <DialogTrigger asChild>
               <Button className="flex items-center gap-2">
-                <Plus className="h-4 w-4" />  Generar factura
-
+                <Plus className="h-4 w-4" /> Generar factura
               </Button>
             </DialogTrigger>
 
@@ -426,25 +421,49 @@ export default function UsersPage() {
                   <FormField
                     control={form.control}
                     name="transactionId"
-                    render={({ field }) => (
-                      <FormItem>
-                        <FormLabel>ID de transacción</FormLabel>
-                        <FormControl>
-                          <select
-                            {...field}
-                            className="w-full border rounded px-3 py-2"
-                          >
-                            <option value="">Seleccione un ID</option>
-                            {transactioId && transactioId.map((item: Transaction) => (
-                              <option key={item._id} value={item._id}>
-                                {item._id} — {moment(item.createdAt).format('MMMM Do YYYY, h:mm:ss a')}
-                              </option>
-                            ))}
-                          </select>
-                        </FormControl>
-                        <FormMessage />
-                      </FormItem>
-                    )}
+                    render={({ field }) => {
+                      const selectedTransaction = transactioId.find(
+                        (item: Transaction) => item._id === field.value
+                      );
+
+                      return (
+                        <FormItem>
+                          <FormLabel>ID de transacción</FormLabel>
+                          <FormControl>
+                            <>
+                              <select
+                                {...field}
+                                className="w-full border rounded px-3 py-2"
+                              >
+                                <option value="">Seleccione un ID</option>
+                                {transactioId.map((item: Transaction) => {
+                                  const isSelected = field.value === item._id;
+                                  return (
+                                    <option key={item._id} value={item._id}>
+                                      {isSelected
+                                        ? item._id
+                                        : `${item._id} — ${moment(
+                                            item.createdAt
+                                          ).format("MMMM Do YYYY, HH:mm:ss")}`}
+                                    </option>
+                                  );
+                                })}
+                              </select>
+
+                              {/* ✅ Show timestamp below select in 24-hr format */}
+                              {selectedTransaction && (
+                                <p className="text-xs text-gray-500 mt-1">
+                                  {moment(selectedTransaction.createdAt).format(
+                                    "MMMM Do YYYY, HH:mm:ss"
+                                  )}
+                                </p>
+                              )}
+                            </>
+                          </FormControl>
+                          <FormMessage />
+                        </FormItem>
+                      );
+                    }}
                   />
 
                   {/* Name + autocomplete */}
@@ -691,8 +710,8 @@ export default function UsersPage() {
                         <TableCell>
                           {mounted
                             ? moment(u.createdAt).format(
-                              "MMMM Do YYYY, h:mm:ss a"
-                            )
+                                "MMMM Do YYYY, h:mm:ss a"
+                              )
                             : u.createdAt}
                         </TableCell>
                         <TableCell className="text-right">
@@ -706,10 +725,11 @@ export default function UsersPage() {
                                   onClick={() =>
                                     u.facturas && downloadFacturas(u.facturas)
                                   }
-                                  className={`h-8 w-8 ${!u?.facturas?.length
-                                    ? "cursor-not-allowed opacity-50"
-                                    : ""
-                                    }`}
+                                  className={`h-8 w-8 ${
+                                    !u?.facturas?.length
+                                      ? "cursor-not-allowed opacity-50"
+                                      : ""
+                                  }`}
                                 >
                                   <Printer className="h-4 w-4" />
                                   <span className="sr-only">
@@ -778,6 +798,6 @@ export default function UsersPage() {
           )}
         </Card>
       </div>
-    </div >
+    </div>
   );
 }
