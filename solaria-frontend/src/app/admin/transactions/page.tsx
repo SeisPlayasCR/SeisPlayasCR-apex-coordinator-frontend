@@ -34,10 +34,14 @@ interface Transaction {
 }
 
 export default function TransactionsPage() {
+
   const { data, isSuccess, isLoading } = useQuery({
     queryKey: ["getTransactions"],
     queryFn: getAllTransaction,
+    refetchInterval: 2000,
   });
+
+
   console.log(data?.result?.data, "Heyyyyyyyyyyyyyyy");
   const [transactions, setTransactions] = useState<Transaction[]>([
     // {
