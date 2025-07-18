@@ -75,11 +75,7 @@ const userSchema = z
       .max(12, "El ID no debe tener más de 12 dígitos")
       .regex(/^\d+$/, "Solo se permiten números"),
 
-    phoneNumber: z
-      .string()
-      .nonempty("Phone number is required")
-      .min(10)
-      .max(15),
+    phoneNumber: z.string().nonempty("Phone number is required").min(8).max(15),
 
     code: z.string().min(2),
 
@@ -153,6 +149,9 @@ export interface User {
   _id: string;
   customerId: string; // transactionId
   name: string;
+  BusinessName?: string;
+  isBusiness?: boolean;
+  code: string; // true or false
   email: string;
   role: string;
   createdAt: string;
@@ -255,8 +254,6 @@ export default function UsersPage() {
     form.setValue("name", value);
 
     if (value) {
-      console.log("val", value);
-
       const f = users.filter((u) =>
         u.name?.toLowerCase().includes(value.toLowerCase())
       );
@@ -276,6 +273,28 @@ export default function UsersPage() {
     form.setValue("email", user.email);
     form.setValue("userId", user.customerId);
     form.setValue("phoneNumber", user.phoneNumber || "");
+
+    // 🌍 Auto-select country code based on phone number
+    if (user.phoneNumber) {
+      const normalizedPhone = user.phoneNumber.replace(/\s|-/g, "").trim();
+      const matched = countryCodes.find((c) => user.code.startsWith(c.code));
+      if (matched) {
+        form.setValue("code", matched.code);
+        const cleanNumber = normalizedPhone.replace(matched.code, "");
+        form.setValue("phoneNumber", cleanNumber);
+      }
+    }
+
+    // ✅ Set isBusiness as "true" or "false"
+    if (typeof user.isBusiness !== "undefined") {
+      form.setValue("isBusiness", user.isBusiness ? "true" : "false");
+    }
+
+    // ✅ Set businessName if exists
+    if (user.BusinessName) {
+      form.setValue("businessName", user.BusinessName);
+    }
+
     setShowSuggestions(false);
   };
 

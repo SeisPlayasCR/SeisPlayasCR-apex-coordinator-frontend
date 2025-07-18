@@ -21,6 +21,7 @@ import { saveAs } from "file-saver";
 interface Customer {
   _id: string;
   name: string;
+  code: string;
   phoneNumber: string;
 }
 
@@ -120,7 +121,10 @@ export default function FacturasPage() {
                     <TableRow key={f._id}>
                       <TableCell>{f.customerId?._id}</TableCell>
                       <TableCell>{f.customerId?.name}</TableCell>
-                      <TableCell>{f.customerId?.phoneNumber}</TableCell>
+                      <TableCell>
+                        {f.customerId?.code}
+                        {f.customerId?.phoneNumber}
+                      </TableCell>
                       <TableCell>{f.isBusiness ? "Sí" : "No"}</TableCell>
                       <TableCell>{f.SolariaInvoiceId}</TableCell>
                       <TableCell>
