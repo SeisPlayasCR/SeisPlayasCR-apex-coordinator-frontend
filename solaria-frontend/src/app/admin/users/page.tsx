@@ -457,7 +457,7 @@ export default function UsersPage() {
                                 })}
                               </select>
 
-                              {/* ✅ Show timestamp below select in 24-hr format */}
+                              {/* ✅ Show timestamp below select in 24-hr formt */}
                               {selectedTransaction && (
                                 <p className="text-xs text-gray-500 mt-1">
                                   {moment(selectedTransaction.createdAt).format(
