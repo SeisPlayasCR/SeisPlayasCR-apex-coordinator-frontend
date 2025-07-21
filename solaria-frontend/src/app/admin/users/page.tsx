@@ -115,6 +115,7 @@ const userSchema = z
 type Transaction = {
   _id: string;
   createdAt: string;
+  totalAfterTax: number;
 };
 export type UserFormValues = z.infer<typeof userSchema>;
 
@@ -395,16 +396,17 @@ export default function UsersPage() {
               </Button>
             </DialogTrigger>
 
-            <DialogContent className="sm:max-w-[500px] max-h-[90vh] overflow-y-auto p-6 ">
+            <DialogContent className="sm:max-w-[650px] max-h-[90vh] overflow-y-auto p-6 ">
               {isPending && (
                 <div className="absolute inset-0 z-10 flex items-center justify-center bg-[rgba(0,0,0,0.2)]  ">
                   <Spinner />
                 </div>
               )}
+
               <DialogHeader>
                 <DialogTitle>Generar factura</DialogTitle>
                 <DialogDescription>
-                Complete la siguiente información para Generar Factura
+                  Complete la siguiente información para Generar Factura
                 </DialogDescription>
               </DialogHeader>
 
@@ -443,7 +445,13 @@ export default function UsersPage() {
                                         ? item._id
                                         : `${item._id} — ${moment(
                                             item.createdAt
-                                          ).format("MMMM Do YYYY, HH:mm:ss")}`}
+                                          ).format(
+                                            "MMMM Do YYYY, HH:mm:ss"
+                                          )} — ₡${
+                                            item.totalAfterTax
+                                              ? item.totalAfterTax
+                                              : 0
+                                          }`}
                                     </option>
                                   );
                                 })}
@@ -454,7 +462,11 @@ export default function UsersPage() {
                                 <p className="text-xs text-gray-500 mt-1">
                                   {moment(selectedTransaction.createdAt).format(
                                     "MMMM Do YYYY, HH:mm:ss"
-                                  )}
+                                  )}{" "}
+                                  — ₡
+                                  {selectedTransaction.totalAfterTax
+                                    ? selectedTransaction.totalAfterTax
+                                    : 0}
                                 </p>
                               )}
                             </>

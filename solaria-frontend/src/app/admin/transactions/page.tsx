@@ -31,16 +31,15 @@ interface Transaction {
   dineIn: boolean;
   table_id: string;
   createdAt: string;
+  totalAfterTax: number;
 }
 
 export default function TransactionsPage() {
-
   const { data, isSuccess, isLoading } = useQuery({
     queryKey: ["getTransactions"],
     queryFn: getAllTransaction,
     refetchInterval: 2000,
   });
-
 
   console.log(data?.result?.data, "Heyyyyyyyyyyyyyyy");
   const [transactions, setTransactions] = useState<Transaction[]>([
@@ -144,6 +143,7 @@ export default function TransactionsPage() {
                     <TableRow>
                       <TableHead>ID de transacción</TableHead>
                       <TableHead>Cantidad</TableHead>
+                      <TableHead>después de impuestos</TableHead>
                       <TableHead>¿Qué pasa con din EI?</TableHead>
                       <TableHead>Id. de tabla</TableHead>
                       <TableHead>Fecha</TableHead>
@@ -190,6 +190,7 @@ export default function TransactionsPage() {
                                                     </span>
                                                 </TableCell> */}
                           <TableCell>{transaction.totalAmount}</TableCell>
+                          <TableCell>{transaction.totalAfterTax}</TableCell>
                           <TableCell>
                             {transaction.dineIn === true ? (
                               <span> Sí</span>
