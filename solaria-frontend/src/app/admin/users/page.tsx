@@ -50,7 +50,7 @@ import moment from "moment";
 import JSZip from "jszip";
 import { saveAs } from "file-saver";
 import * as z from "zod";
-import { Spinner } from "../_components/Spinner";
+// import { Spinner } from "../_components/Spinner";
 
 // ----------------------
 // 🔒 Validation Schema
@@ -397,11 +397,11 @@ export default function UsersPage() {
             </DialogTrigger>
 
             <DialogContent className="sm:max-w-[650px] max-h-[90vh] overflow-y-auto p-6 ">
-              {isPending && (
+              {/* {isPending && (
                 <div className="absolute inset-0 z-10 flex items-center justify-center bg-[rgba(0,0,0,0.2)]  ">
                   <Spinner />
                 </div>
-              )}
+              )} */}
 
               <DialogHeader>
                 <DialogTitle>Generar factura</DialogTitle>
@@ -447,11 +447,9 @@ export default function UsersPage() {
                                             item.createdAt
                                           ).format(
                                             "MMMM Do YYYY, HH:mm:ss"
-                                          )} — ₡${
-                                            item.totalAfterTax
-                                              ? item.totalAfterTax
-                                              : 0
-                                          }`}
+                                          )} — $${Number(
+                                            item.totalAfterTax ?? 0
+                                          ).toFixed(2)}`}
                                     </option>
                                   );
                                 })}
@@ -463,9 +461,11 @@ export default function UsersPage() {
                                   {moment(selectedTransaction.createdAt).format(
                                     "MMMM Do YYYY, HH:mm:ss"
                                   )}{" "}
-                                  — ₡
+                                  — $
                                   {selectedTransaction.totalAfterTax
-                                    ? selectedTransaction.totalAfterTax
+                                    ? Number(
+                                        selectedTransaction.totalAfterTax ?? 0
+                                      ).toFixed(2)
                                     : 0}
                                 </p>
                               )}

@@ -41,7 +41,6 @@ export default function TransactionsPage() {
     refetchInterval: 2000,
   });
 
-  console.log(data?.result?.data, "Heyyyyyyyyyyyyyyy");
   const [transactions, setTransactions] = useState<Transaction[]>([
     // {
     //     id: "t1",
@@ -91,7 +90,6 @@ export default function TransactionsPage() {
       setTransactions(data.result.data);
     }
   }, [isSuccess]);
-  console.log(data, "Hey I am the data");
 
   const [currentPage, setCurrentPage] = useState(1);
   const [itemsPerPage] = useState(5); // Same as users page for consistency
@@ -190,7 +188,9 @@ export default function TransactionsPage() {
                                                     </span>
                                                 </TableCell> */}
                           <TableCell>{transaction.totalAmount}</TableCell>
-                          <TableCell>{transaction.totalAfterTax}</TableCell>
+                          <TableCell>
+                            {Number(transaction.totalAfterTax).toFixed(2)}
+                          </TableCell>
                           <TableCell>
                             {transaction.dineIn === true ? (
                               <span> Sí</span>
