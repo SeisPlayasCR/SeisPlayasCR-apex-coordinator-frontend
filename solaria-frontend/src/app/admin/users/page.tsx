@@ -2,28 +2,11 @@
 
 import type React from "react";
 
-import { useState, useEffect, useRef } from "react";
-import { useForm } from "react-hook-form";
-import { zodResolver } from "@hookform/resolvers/zod";
-import { Plus, Printer, Search } from "lucide-react";
+import { useState, useEffect } from "react";
+
+import { Printer } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import {
-  Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogHeader,
-  DialogTitle,
-  DialogTrigger,
-} from "@/components/ui/dialog";
-import {
-  Form,
-  FormControl,
-  FormField,
-  FormItem,
-  FormLabel,
-  FormMessage,
-} from "@/components/ui/form";
-import { Input } from "@/components/ui/input";
+
 import {
   Table,
   TableBody,
@@ -39,120 +22,21 @@ import {
   TooltipProvider,
   TooltipTrigger,
 } from "@/components/ui/tooltip";
-import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import {
-  getAllCustomers,
-  getAllTransaction,
-  sendToFactura,
-} from "@/utils/services/services";
+import { useQuery } from "@tanstack/react-query";
+import { getAllCustomers, getAllTransaction } from "@/utils/services/services";
 import { toast } from "sonner";
-import moment from "moment";
 import JSZip from "jszip";
 import { saveAs } from "file-saver";
-import * as z from "zod";
-// import { Spinner } from "../_components/Spinner";
 
-// ----------------------
-// 🔒 Validation Schema
-// ----------------------
-
-const userSchema = z
-  .object({
-    transactionId: z
-      .string()
-      .nonempty("Transaction ID is required")
-      .min(3, "Please Enter Id"),
-
-    name: z
-      .string()
-      .nonempty("Name is required")
-      .min(2, "Name must be at least 2 characters"),
-
-    email: z
-      .string()
-      .nonempty("Email is required")
-      .email("Please enter a valid email address"),
-
-    userId: z
-      .string()
-      .nonempty("ID is required")
-      .min(9, "El ID debe tener al menos 9 dígitos")
-      .max(12, "El ID no debe tener más de 12 dígitos")
-      .regex(/^\d+$/, "Solo se permiten números"),
-
-    phoneNumber: z.string().nonempty("Phone number is required").min(8).max(15),
-
-    code: z.string().min(2),
-
-    isBusiness: z.enum(["true", "false"]),
-
-    businessName: z.string().optional(),
-  })
-  .refine(
-    (data) => {
-      if (data.isBusiness === "true") {
-        return !!data.businessName?.trim();
-      }
-      return true;
-    },
-    {
-      path: ["businessName"],
-      message: "El nombre de la empresa es obligatorio.",
-    }
-  )
-  .refine(
-    (data) => {
-      if (data.isBusiness === "true") {
-        return data.userId.length >= 10;
-      }
-      return true;
-    },
-    {
-      path: ["userId"],
-      message: "El ID debe tener al menos 10 dígitos si es una empresa.",
-    }
-  );
 type Transaction = {
   _id: string;
   createdAt: string;
   totalAfterTax: number;
 };
-export type UserFormValues = z.infer<typeof userSchema>;
-
-// Popular country codes first
-const countryCodes = [
-  { code: "+506", country: "Costa Rica", flag: "🇨🇷", popular: true },
-  { code: "+1", country: "United States", flag: "🇺🇸", popular: true },
-  { code: "+1", country: "Canada", flag: "🇨🇦", popular: true },
-  { code: "+44", country: "United Kingdom", flag: "🇬🇧", popular: true },
-  { code: "+49", country: "Germany", flag: "🇩🇪", popular: true },
-  { code: "+33", country: "France", flag: "🇫🇷", popular: true },
-  { code: "+39", country: "Italy", flag: "🇮🇹", popular: true },
-  { code: "+34", country: "Spain", flag: "🇪🇸", popular: true },
-  { code: "+91", country: "India", flag: "🇮🇳", popular: true },
-  { code: "+86", country: "China", flag: "🇨🇳", popular: true },
-  { code: "+81", country: "Japan", flag: "🇯🇵", popular: true },
-  { code: "+82", country: "South Korea", flag: "🇰🇷", popular: true },
-  { code: "+61", country: "Australia", flag: "🇦🇺", popular: true },
-  { code: "+55", country: "Brazil", flag: "🇧🇷", popular: true },
-  { code: "+52", country: "Mexico", flag: "🇲🇽", popular: true },
-  { code: "+7", country: "Russia", flag: "🇷🇺", popular: true },
-  { code: "+92", country: "Pakistan", flag: "🇵🇰", popular: false },
-];
 
 // ----------------------
 // 🔒 Interfaces
 // ----------------------
-interface SendToFacturaPayload {
-  transactionId: string;
-  name: string;
-  email: string;
-  userId: string;
-  phoneNumber: string;
-  code: string;
-  isBusiness: string;
-  BusinessName: string; // Note: Capital B to match API
-}
 
 export interface User {
   _id: string;
@@ -172,13 +56,10 @@ export default function UsersPage() {
   // ----------------------
   // 🛠️ Hooks & State
   // ----------------------
-  const queryClient = useQueryClient();
-  const [open, setOpen] = useState(false);
+
   const [users, setUsers] = useState<User[]>([]);
   const [currentPage, setCurrentPage] = useState(1);
-  const [itemsPerPage] = useState(5);
-  const [filteredUsers, setFilteredUsers] = useState<User[]>([]);
-  const [showSuggestions, setShowSuggestions] = useState(false);
+  const [itemsPerPage] = useState(10);
   const [mounted, setMounted] = useState(false);
 
   const [transactioId, setTransactionId] = useState<Transaction[] | []>([]);
@@ -196,7 +77,6 @@ export default function UsersPage() {
   console.log(transactioId, "Hey I am the ooooo");
 
   // 🔑 Suggestions dropdown wrapper (input + list)
-  const wrapperRef = useRef<HTMLDivElement>(null);
 
   // Pagination helpers
   const indexOfLastItem = currentPage * itemsPerPage;
@@ -207,56 +87,11 @@ export default function UsersPage() {
   // ----------------------
   // 📝 React‑Hook‑Form
   // ----------------------
-  const form = useForm<UserFormValues>({
-    resolver: zodResolver(userSchema),
-    defaultValues: {
-      transactionId: "",
-      name: "",
-      email: "",
-      userId: "",
-      phoneNumber: "",
-      code: "+1",
-      isBusiness: "false",
-      businessName: "",
-    },
-  });
+
   // ----------------------
   // 🔗 React‑Query – add user
   // ----------------------
-  const { mutate, isPending } = useMutation({
-    mutationFn: (data: SendToFacturaPayload) =>
-      // Convert isBusiness from string to boolean before sending
-      sendToFactura({
-        ...data,
-        isBusiness: data.isBusiness === "true",
-      }),
-    onSuccess: (data) => {
-      toast.success(data.message);
-      form.reset();
-      setOpen(false);
-      queryClient.invalidateQueries({ queryKey: ["getAllCustomers"] });
-    },
-    onError: (error) => {
-      console.log(error, "Error Message of the Send Factura");
-      toast.error(error.message);
-    },
-  });
 
-  const onSubmit = (data: UserFormValues) => {
-    const payload: SendToFacturaPayload = {
-      transactionId: data.transactionId,
-      name: data.name,
-      email: data.email,
-      userId: data.userId,
-      phoneNumber: data.phoneNumber,
-      code: data.code,
-      isBusiness: data.isBusiness,
-      BusinessName: data.businessName || "",
-    };
-
-    console.log("Submitting payload:", payload);
-    mutate(payload);
-  };
   // ----------------------
   // 🔗 React‑Query – fetch users
   // ----------------------
@@ -271,73 +106,6 @@ export default function UsersPage() {
 
   // Ensure moment only runs client‑side
   useEffect(() => setMounted(true), []);
-
-  // ----------------------
-  // 🔍 Autocomplete helpers
-  // ----------------------
-  const handleNameInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const value = e.target.value;
-    form.setValue("name", value);
-
-    if (value) {
-      const f = users.filter((u) =>
-        u.name?.toLowerCase().includes(value.toLowerCase())
-      );
-      setFilteredUsers(f);
-      setShowSuggestions(true);
-    } else {
-      setFilteredUsers([]);
-      setShowSuggestions(false);
-      form.setValue("email", "");
-      form.setValue("userId", "");
-      form.setValue("phoneNumber", "");
-    }
-  };
-
-  const handleSelectUser = (user: User) => {
-    form.setValue("name", user.name, { shouldValidate: true });
-    form.setValue("email", user.email);
-    form.setValue("userId", user.customerId);
-    form.setValue("phoneNumber", user.phoneNumber || "");
-
-    // 🌍 Auto-select country code based on phone number
-    if (user.phoneNumber) {
-      const normalizedPhone = user.phoneNumber.replace(/\s|-/g, "").trim();
-      const matched = countryCodes.find((c) => user.code.startsWith(c.code));
-      if (matched) {
-        form.setValue("code", matched.code);
-        const cleanNumber = normalizedPhone.replace(matched.code, "");
-        form.setValue("phoneNumber", cleanNumber);
-      }
-    }
-
-    // ✅ Set isBusiness as "true" or "false"
-    if (typeof user.isBusiness !== "undefined") {
-      form.setValue("isBusiness", user.isBusiness ? "true" : "false");
-    }
-
-    // ✅ Set businessName if exists
-    if (user.BusinessName) {
-      form.setValue("businessName", user.BusinessName);
-    }
-
-    setShowSuggestions(false);
-  };
-
-  // Close suggestions only when clicking *outside* the wrapper (input + list)
-  useEffect(() => {
-    const listener = (e: MouseEvent) => {
-      if (
-        wrapperRef.current &&
-        !wrapperRef.current.contains(e.target as Node)
-      ) {
-        setShowSuggestions(false);
-      }
-    };
-
-    document.addEventListener("click", listener);
-    return () => document.removeEventListener("click", listener);
-  }, []);
 
   // ----------------------
   // 📦 Download facturas
@@ -370,8 +138,6 @@ export default function UsersPage() {
       .then((content) => saveAs(content, "facturas.zip"));
   };
 
-  const countryCode = form.watch("code");
-
   // ----------------------
   // 🖼️ JSX
   // ----------------------
@@ -388,296 +154,6 @@ export default function UsersPage() {
               Administrar y ver todas las usuarios del sistema.
             </p>
           </div>
-          {/* Add user dialog */}
-          <Dialog open={open} onOpenChange={setOpen}>
-            <DialogTrigger asChild>
-              <Button className="flex items-center gap-2">
-                <Plus className="h-4 w-4" /> Generar factura
-              </Button>
-            </DialogTrigger>
-
-            <DialogContent className="sm:max-w-[650px] max-h-[90vh] overflow-y-auto p-6 ">
-              {/* {isPending && (
-                <div className="absolute inset-0 z-10 flex items-center justify-center bg-[rgba(0,0,0,0.2)]  ">
-                  <Spinner />
-                </div>
-              )} */}
-
-              <DialogHeader>
-                <DialogTitle>Generar factura</DialogTitle>
-                <DialogDescription>
-                  Complete la siguiente información para Generar Factura
-                </DialogDescription>
-              </DialogHeader>
-
-              {/* ------------------ */}
-              {/* Form */}
-              {/* ------------------ */}
-              <Form {...form}>
-                <form
-                  onSubmit={form.handleSubmit(onSubmit)}
-                  className="space-y-6"
-                >
-                  {/* Transaction ID */}
-                  <FormField
-                    control={form.control}
-                    name="transactionId"
-                    render={({ field }) => {
-                      const selectedTransaction = transactioId.find(
-                        (item: Transaction) => item._id === field.value
-                      );
-
-                      return (
-                        <FormItem>
-                          <FormLabel>ID de transacción</FormLabel>
-                          <FormControl>
-                            <>
-                              <select
-                                {...field}
-                                className="w-full border rounded px-3 py-2"
-                              >
-                                <option value="">Seleccione un ID</option>
-                                {transactioId.map((item: Transaction) => {
-                                  const isSelected = field.value === item._id;
-                                  return (
-                                    <option key={item._id} value={item._id}>
-                                      {isSelected
-                                        ? item._id
-                                        : `${item._id} — ${moment(
-                                            item.createdAt
-                                          ).format(
-                                            "MMMM Do YYYY, HH:mm:ss"
-                                          )} — $${Number(
-                                            item.totalAfterTax ?? 0
-                                          ).toFixed(2)}`}
-                                    </option>
-                                  );
-                                })}
-                              </select>
-
-                              {/* ✅ Show timestamp below select in 24-hr formt */}
-                              {selectedTransaction && (
-                                <p className="text-xs text-gray-500 mt-1">
-                                  {moment(selectedTransaction.createdAt).format(
-                                    "MMMM Do YYYY, HH:mm:ss"
-                                  )}{" "}
-                                  — $
-                                  {selectedTransaction.totalAfterTax
-                                    ? Number(
-                                        selectedTransaction.totalAfterTax ?? 0
-                                      ).toFixed(2)
-                                    : 0}
-                                </p>
-                              )}
-                            </>
-                          </FormControl>
-                          <FormMessage />
-                        </FormItem>
-                      );
-                    }}
-                  />
-
-                  {/* Name + autocomplete */}
-                  <FormField
-                    control={form.control}
-                    name="name"
-                    render={({ field }) => (
-                      <FormItem>
-                        <FormLabel>Nombre</FormLabel>
-                        <div className="relative" ref={wrapperRef}>
-                          {/* Input */}
-                          <FormControl>
-                            <div className="relative">
-                              <Input
-                                placeholder="Ingrese el nombre del usuario o busque..."
-                                {...field}
-                                onChange={handleNameInputChange}
-                                onFocus={() => setShowSuggestions(true)}
-                                className="pr-10"
-                              />
-                              <Search className="absolute right-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400" />
-                            </div>
-                          </FormControl>
-                          {/* Dropdown */}
-                          {showSuggestions && filteredUsers.length > 0 && (
-                            <div className="absolute z-20 w-full bg-white border border-gray-200 rounded-md shadow-lg top-full mt-1 max-h-48 overflow-y-auto">
-                              {filteredUsers.map((u) => (
-                                <div
-                                  key={u._id}
-                                  className="px-4 py-2 cursor-pointer hover:bg-gray-100"
-                                  onMouseDown={() => handleSelectUser(u)} // ✅ use onMouseDown so selection fires before click‑outside closes
-                                >
-                                  {u.name} ({u.email})
-                                </div>
-                              ))}
-                            </div>
-                          )}
-                        </div>
-                        <FormMessage />
-                      </FormItem>
-                    )}
-                  />
-
-                  {/* Email */}
-                  <FormField
-                    control={form.control}
-                    name="email"
-                    render={({ field }) => (
-                      <FormItem>
-                        <FormLabel>Correo electrónico</FormLabel>
-                        <FormControl>
-                          <Input
-                            type="email"
-                            placeholder="Ingrese la dirección de correo electrónico"
-                            {...field}
-                          />
-                        </FormControl>
-                        <FormMessage />
-                      </FormItem>
-                    )}
-                  />
-
-                  {/* User ID */}
-                  <FormField
-                    control={form.control}
-                    name="userId"
-                    render={({ field }) => (
-                      <FormItem>
-                        <FormLabel>ID de usuario | Business ID</FormLabel>
-                        <FormControl>
-                          <Input
-                            placeholder="Ingrese un ID de usuario único"
-                            {...field}
-                          />
-                        </FormControl>
-                        <FormMessage />
-                      </FormItem>
-                    )}
-                  />
-
-                  {/* Business ID */}
-
-                  <FormField
-                    control={form.control}
-                    name="isBusiness"
-                    render={({ field }) => (
-                      <FormItem>
-                        <FormLabel>¿Es una empresa?</FormLabel>
-                        <FormControl>
-                          <div className="flex items-center space-x-4">
-                            <label className="flex items-center space-x-2">
-                              <input
-                                type="radio"
-                                value="true"
-                                checked={field.value === "true"}
-                                onChange={() => field.onChange("true")}
-                              />
-                              <span>Sí</span>
-                            </label>
-                            <label className="flex items-center space-x-2">
-                              <input
-                                type="radio"
-                                value="false"
-                                checked={field.value === "false"}
-                                onChange={() => field.onChange("false")}
-                              />
-                              <span>No</span>
-                            </label>
-                          </div>
-                        </FormControl>
-                        <FormMessage />
-                      </FormItem>
-                    )}
-                  />
-
-                  {/* Business Name (optional) */}
-                  {form.watch("isBusiness") === "true" && (
-                    <FormField
-                      control={form.control}
-                      name="businessName"
-                      render={({ field }) => (
-                        <FormItem>
-                          <FormLabel>Nombre de empresa</FormLabel>
-                          <FormControl>
-                            <Input
-                              placeholder="Ingrese el nombre de la empresa"
-                              {...field}
-                            />
-                          </FormControl>
-                          <FormMessage />
-                        </FormItem>
-                      )}
-                    />
-                  )}
-
-                  {/* Phone number + code */}
-                  <FormField
-                    control={form.control}
-                    name="phoneNumber"
-                    render={({ field }) => (
-                      <FormItem>
-                        <FormLabel>Número de teléfono</FormLabel>
-                        <FormControl>
-                          <div className="flex gap-2">
-                            {/* Country code */}
-                            <select
-                              value={countryCode}
-                              onChange={(e) => {
-                                const selected = e.target.value;
-                                form.setValue("code", selected);
-                              }}
-                              className="w-[200px] rounded-md border border-gray-300 bg-white h-10 px-2 text-sm"
-                            >
-                              {countryCodes
-                                .sort(
-                                  (a, b) =>
-                                    Number(b.popular) - Number(a.popular)
-                                )
-                                .map((c, idx) => (
-                                  <option
-                                    key={`${c.code}-${idx}`}
-                                    value={c.code}
-                                  >
-                                    {c.flag} {c.country} ({c.code})
-                                  </option>
-                                ))}
-                            </select>
-
-                            {/* Phone number input */}
-                            <Input
-                              placeholder="3001234567"
-                              className="flex-1 h-10"
-                              value={field.value}
-                              onChange={(e) =>
-                                field.onChange(
-                                  e.target.value.replace(/\D/g, "")
-                                )
-                              }
-                            />
-                          </div>
-                        </FormControl>
-                        <FormMessage />
-                      </FormItem>
-                    )}
-                  />
-
-                  {/* Actions */}
-                  <div className="flex justify-end space-x-3 pt-4">
-                    <Button
-                      type="button"
-                      variant="outline"
-                      onClick={() => setOpen(false)}
-                    >
-                      Cancelar
-                    </Button>
-                    <Button type="submit" disabled={isPending}>
-                      {isPending ? "Generar..." : "Generar factura"}
-                    </Button>
-                  </div>
-                </form>
-              </Form>
-            </DialogContent>
-          </Dialog>
         </div>
 
         {/* ------------------ */}
@@ -707,7 +183,7 @@ export default function UsersPage() {
                         colSpan={8}
                         className="text-center py-8 text-gray-500"
                       >
-                        No users found. Add a new user to get started.
+                        No users found
                       </TableCell>
                     </TableRow>
                   ) : (
@@ -720,9 +196,11 @@ export default function UsersPage() {
                         <TableCell>{u.role}</TableCell>
                         <TableCell>
                           {mounted
-                            ? moment(u.createdAt).format(
-                                "MMMM Do YYYY, h:mm:ss a"
-                              )
+                            ? new Date(u.createdAt).toLocaleString("es-CR", {
+                                dateStyle: "medium",
+                                timeStyle: "short",
+                                hour12: false, // 👈 forces 24-hour format
+                              })
                             : u.createdAt}
                         </TableCell>
                         <TableCell className="text-right">
@@ -763,37 +241,21 @@ export default function UsersPage() {
           </CardContent>
 
           {/* Pagination */}
+
           {users.length > 0 && (
-            <div className="flex items-center justify-between px-6 py-4">
+            <div className="flex items-center justify-between px-6 py-4 border-t">
               <div className="text-sm text-gray-700">
-                Showing {indexOfFirstItem + 1} to{" "}
-                {Math.min(indexOfLastItem, users.length)} of {users.length}{" "}
-                results
+                Página {currentPage} de {totalPages}
               </div>
-              <div className="flex items-center space-x-2">
+              <div className="flex space-x-2">
                 <Button
                   variant="outline"
                   size="sm"
                   onClick={() => setCurrentPage((p) => Math.max(p - 1, 1))}
                   disabled={currentPage === 1}
                 >
-                  Previous
+                  Anterior
                 </Button>
-                <div className="flex items-center space-x-1">
-                  {Array.from({ length: totalPages }, (_, i) => i + 1).map(
-                    (page) => (
-                      <Button
-                        key={page}
-                        variant={currentPage === page ? "default" : "outline"}
-                        size="sm"
-                        onClick={() => setCurrentPage(page)}
-                        className="w-8 h-8"
-                      >
-                        {page}
-                      </Button>
-                    )
-                  )}
-                </div>
                 <Button
                   variant="outline"
                   size="sm"
@@ -802,7 +264,7 @@ export default function UsersPage() {
                   }
                   disabled={currentPage === totalPages}
                 >
-                  Next
+                  Siguiente
                 </Button>
               </div>
             </div>

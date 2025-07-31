@@ -1,7 +1,6 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import moment from "moment";
 import { Copy } from "lucide-react";
 import { toast } from "sonner";
 
@@ -41,50 +40,7 @@ export default function TransactionsPage() {
     refetchInterval: 2000,
   });
 
-  const [transactions, setTransactions] = useState<Transaction[]>([
-    // {
-    //     id: "t1",
-    //     transactionId: "TRX001",
-    //     amount: 150.75,
-    //     type: "Income",
-    //     date: "2024-07-10",
-    // },
-    // {
-    //     id: "t2",
-    //     transactionId: "TRX002",
-    //     amount: 45.0,
-    //     type: "Expense",
-    //     date: "2024-07-09",
-    // },
-    // {
-    //     id: "t3",
-    //     transactionId: "TRX003",
-    //     amount: 200.0,
-    //     type: "Income",
-    //     date: "2024-07-08",
-    // },
-    // {
-    //     id: "t4",
-    //     transactionId: "TRX004",
-    //     amount: 12.5,
-    //     type: "Expense",
-    //     date: "2024-07-08",
-    // },
-    // {
-    //     id: "t5",
-    //     transactionId: "TRX005",
-    //     amount: 500.0,
-    //     type: "Income",
-    //     date: "2024-07-07",
-    // },
-    // {
-    //     id: "t6",
-    //     transactionId: "TRX006",
-    //     amount: 75.2,
-    //     type: "Expense",
-    //     date: "2024-07-06",
-    // },
-  ]);
+  const [transactions, setTransactions] = useState<Transaction[]>([]);
   useEffect(() => {
     if (data) {
       setTransactions(data.result.data);
@@ -92,7 +48,7 @@ export default function TransactionsPage() {
   }, [isSuccess]);
 
   const [currentPage, setCurrentPage] = useState(1);
-  const [itemsPerPage] = useState(5); // Same as users page for consistency
+  const [itemsPerPage] = useState(10); // Same as users page for consistency
 
   // Calculate pagination
   const indexOfLastItem = currentPage * itemsPerPage;
@@ -200,8 +156,13 @@ export default function TransactionsPage() {
                           </TableCell>
                           <TableCell>{transaction.table_id}</TableCell>
                           <TableCell>
-                            {moment(transaction.createdAt).format(
-                              "MMMM Do YYYY, h:mm:ss a"
+                            {new Date(transaction.createdAt).toLocaleString(
+                              "es-CR",
+                              {
+                                dateStyle: "medium",
+                                timeStyle: "short",
+                                hour12: false, // 👈 forces 24-hour format
+                              }
                             )}
                           </TableCell>
                         </TableRow>
@@ -213,48 +174,30 @@ export default function TransactionsPage() {
             </CardContent>
           )}
           {/* Pagination */}
+
           {transactions.length > 0 && (
-            <div className="flex items-center justify-between px-6 py-4">
+            <div className="flex items-center justify-between px-6 py-4 border-t">
               <div className="text-sm text-gray-700">
-                Showing {indexOfFirstItem + 1} to{" "}
-                {Math.min(indexOfLastItem, transactions.length)} of{" "}
-                {transactions.length} results
+                Página {currentPage} de {totalPages}
               </div>
-              <div className="flex items-center space-x-2">
+              <div className="flex space-x-2">
                 <Button
                   variant="outline"
                   size="sm"
-                  onClick={() =>
-                    setCurrentPage((prev) => Math.max(prev - 1, 1))
-                  }
+                  onClick={() => setCurrentPage((p) => Math.max(p - 1, 1))}
                   disabled={currentPage === 1}
                 >
-                  Previa
+                  Anterior
                 </Button>
-                <div className="flex items-center space-x-1">
-                  {Array.from({ length: totalPages }, (_, i) => i + 1).map(
-                    (page) => (
-                      <Button
-                        key={page}
-                        variant={currentPage === page ? "default" : "outline"}
-                        size="sm"
-                        onClick={() => setCurrentPage(page)}
-                        className="w-8 h-8"
-                      >
-                        {page}
-                      </Button>
-                    )
-                  )}
-                </div>
                 <Button
                   variant="outline"
                   size="sm"
                   onClick={() =>
-                    setCurrentPage((prev) => Math.min(prev + 1, totalPages))
+                    setCurrentPage((p) => Math.min(p + 1, totalPages))
                   }
                   disabled={currentPage === totalPages}
                 >
-                  Próxima
+                  Siguiente
                 </Button>
               </div>
             </div>

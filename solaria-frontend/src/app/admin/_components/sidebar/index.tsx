@@ -31,6 +31,33 @@ export function AppSidebar() {
 
             <SidebarMenu>
               <SidebarMenuItem>
+                {/* Facturas menu item */}
+                <SidebarMenuItem>
+                  <SidebarMenuButton
+                    asChild
+                    isActive={pathname === "/admin/facturas"}
+                  >
+                    <Link href="/admin/facturas">
+                      <FileText className="h-4 w-4" />
+                      <span>Facturas</span>
+                    </Link>
+                  </SidebarMenuButton>
+                </SidebarMenuItem>
+
+                {/* Transaction menu item */}
+                <SidebarMenuItem>
+                  <SidebarMenuButton
+                    asChild
+                    isActive={pathname === "/admin/transactions"}
+                  >
+                    <Link href="/admin/transactions">
+                      <DollarSign className="h-4 w-4" />
+                      <span>Actas</span>
+                    </Link>
+                  </SidebarMenuButton>
+                </SidebarMenuItem>
+
+                {/* All users menu item */}
                 <SidebarMenuButton
                   asChild
                   isActive={pathname === "/admin/users"}
@@ -38,31 +65,6 @@ export function AppSidebar() {
                   <Link href="/admin/users">
                     <Users className="h-4 w-4" />
                     <span>Clientes</span>
-                  </Link>
-                </SidebarMenuButton>
-              </SidebarMenuItem>
-
-              <SidebarMenuItem>
-                <SidebarMenuButton
-                  asChild
-                  isActive={pathname === "/admin/transactions"}
-                >
-                  <Link href="/admin/transactions">
-                    <DollarSign className="h-4 w-4" />
-                    <span>Actas</span>
-                  </Link>
-                </SidebarMenuButton>
-              </SidebarMenuItem>
-
-              {/* ✅ NEW: Facturas menu item */}
-              <SidebarMenuItem>
-                <SidebarMenuButton
-                  asChild
-                  isActive={pathname === "/admin/facturas"}
-                >
-                  <Link href="/admin/facturas">
-                    <FileText className="h-4 w-4" />
-                    <span>Facturas</span>
                   </Link>
                 </SidebarMenuButton>
               </SidebarMenuItem>
