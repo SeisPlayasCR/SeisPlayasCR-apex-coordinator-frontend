@@ -30,7 +30,7 @@ interface Transaction {
   dineIn: boolean;
   table_id: string;
   createdAt: string;
-  totalAfterTax: number;
+  subTotal: number;
 }
 
 export default function TransactionsPage() {
@@ -96,7 +96,7 @@ export default function TransactionsPage() {
                   <TableHeader>
                     <TableRow>
                       <TableHead>ID de transacción</TableHead>
-                      <TableHead>Cantidad</TableHead>
+                      <TableHead>Total parcial</TableHead>
                       <TableHead>después de impuestos</TableHead>
                       <TableHead>¿Qué pasa con din EI?</TableHead>
                       <TableHead>Id. de tabla</TableHead>
@@ -143,9 +143,9 @@ export default function TransactionsPage() {
                                                         {transaction.type}
                                                     </span>
                                                 </TableCell> */}
-                          <TableCell>{transaction.totalAmount}</TableCell>
+                          <TableCell>{transaction.subTotal}</TableCell>
                           <TableCell>
-                            {Number(transaction.totalAfterTax).toFixed(2)}
+                            {Number(transaction.totalAmount).toFixed(2)}
                           </TableCell>
                           <TableCell>
                             {transaction.dineIn === true ? (
