@@ -77,7 +77,7 @@ interface FacturaResponse {
 interface Transaction {
   _id: string;
   createdAt: string;
-  totalAfterTax: number;
+  totalAmount: number;
 }
 
 interface User {
@@ -538,7 +538,7 @@ export default function FacturasPage() {
                                       ).format(
                                         "MMMM Do YYYY, HH:mm:ss"
                                       )} — $${Number(
-                                        item.totalAfterTax ?? 0
+                                        item.totalAmount ?? 0
                                       ).toFixed(2)}`}
                                     </option>
                                   ))}
@@ -550,7 +550,7 @@ export default function FacturasPage() {
                                     ).format("MMMM Do YYYY, HH:mm:ss")}{" "}
                                     — $
                                     {Number(
-                                      selectedTransaction.totalAfterTax ?? 0
+                                      selectedTransaction.totalAmount ?? 0
                                     ).toFixed(2)}
                                   </p>
                                 )}
