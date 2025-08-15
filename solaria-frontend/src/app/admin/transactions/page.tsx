@@ -26,7 +26,7 @@ import { Spinner } from "../_components/Spinner";
 
 interface Transaction {
   _id: string;
-  totalAmount: number;
+  totalAfterTax: number;
   dineIn: boolean;
   table_id: string;
   createdAt: string;
@@ -145,7 +145,7 @@ export default function TransactionsPage() {
                                                 </TableCell> */}
                           <TableCell>{transaction.subTotal}</TableCell>
                           <TableCell>
-                            {Number(transaction.totalAmount).toFixed(2)}
+                            {Number(transaction.totalAfterTax).toFixed(2)}
                           </TableCell>
                           <TableCell>
                             {transaction.dineIn === true ? (
